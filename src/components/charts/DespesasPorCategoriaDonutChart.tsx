@@ -2,12 +2,18 @@ import { useMemo } from 'react'
 
 type Segment = { label: string; valueCents: number; color: string }
 
+const VB = 200
+const cx = VB / 2
+const cy = VB / 2
+const r = 78
+const strokeWidth = 22
+const innerR = 48
+
 export default function DespesasPorCategoriaDonutChart({ segments }: { segments: Segment[] }) {
   const total = segments.reduce((acc, s) => acc + s.valueCents, 0)
 
-  const { circumference, r, dashParts } = useMemo(() => {
-    const radius = 70
-    const c = 2 * Math.PI * radius
+  const { circumference, dashParts } = useMemo(() => {
+    const c = 2 * Math.PI * r
     const partsState = segments.reduce(
       (state, s) => {
         const fraction = total > 0 ? s.valueCents / total : 0
@@ -18,31 +24,18 @@ export default function DespesasPorCategoriaDonutChart({ segments }: { segments:
       { offset: 0, parts: [] as Array<{ color: string; len: number; offset: number }> },
     )
 
-    return { circumference: c, r: radius, dashParts: partsState.parts }
+    return { circumference: c, dashParts: partsState.parts }
   }, [segments, total])
 
-  const W = 240
-  const H = 220
-  const cx = 120
-  const cy = 112
-
-  const strokeWidth = 18
-
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-      <div style={{ minWidth: 140 }}>
-        {segments.slice(0, 3).map((s, idx) => {
-          const percent = total > 0 ? Math.round((s.valueCents / total) * 100) : 0
-          return (
-            <div key={`${s.label}_${idx}`} style={{ color: '#9ca3af', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
-              {s.label} {percent}%
-            </div>
-          )
-        })}
-      </div>
-
-      <div style={{ width: 140, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="140" height="140" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Despesas por Categoria">
+    <div className="donutChartRoot">
+      <div className="donutChartSvgWrap">
+        <svg
+          className="donutChartSvg"
+          viewBox={`0 0 ${VB} ${VB}`}
+          role="img"
+          aria-label="Despesas por Categoria"
+        >
           <circle
             cx={cx}
             cy={cy}
@@ -67,11 +60,23 @@ export default function DespesasPorCategoriaDonutChart({ segments }: { segments:
               />
             ))}
           </g>
-          {/* inner hole */}
-          <circle cx={cx} cy={cy} r={46} fill="white" />
+          <circle cx={cx} cy={cy} r={innerR} fill="var(--bg, #fff)" />
         </svg>
       </div>
+
+      <ul className="donutChartLegend">
+        {segments.map((s, idx) => {
+          const percent = total > 0 ? Math.round((s.valueCents / total) * 100) : 0
+          return (
+            <li key={`${s.label}_${idx}`} className="donutChartLegendItem">
+              <span className="donutChartLegendSwatch" style={{ background: s.color }} aria-hidden />
+              <span className="donutChartLegendText">
+                {s.label} <span className="donutChartLegendPct">{percent}%</span>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
-

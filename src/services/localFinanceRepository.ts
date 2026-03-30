@@ -102,10 +102,12 @@ export class LocalFinanceRepository implements FinanceRepository {
     const existingByName = data.categories.find((c) => c.name.toLowerCase() === input.name.toLowerCase() && c.type === input.type)
     if (existingByName) return existingByName
 
+    const emojiTrim = input.emoji?.trim()
     const category: Category = {
       id: newId('cat'),
       name: input.name.trim(),
       type: input.type,
+      ...(emojiTrim ? { emoji: emojiTrim.slice(0, 8) } : {}),
     }
 
     const now = new Date().toISOString()

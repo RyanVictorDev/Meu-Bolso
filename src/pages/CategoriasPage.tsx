@@ -6,6 +6,7 @@ import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import Select from '../components/ui/Select'
+import EmojiPickerField from '../components/ui/EmojiPickerField'
 import CategoryIcon from '../components/icons/CategoryIcon'
 
 export default function CategoriasPage() {
@@ -13,6 +14,7 @@ export default function CategoriasPage() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<TransactionType>('DESPESA')
+  const [emoji, setEmoji] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const despesas = useMemo(() => {
@@ -30,9 +32,10 @@ export default function CategoriasPage() {
     try {
       const trimmed = name.trim()
       if (trimmed.length < 2) throw new Error('Nome da categoria inválido')
-      await addCategory({ name: trimmed, type })
+      await addCategory({ name: trimmed, type, emoji: emoji ?? undefined })
       setOpen(false)
       setName('')
+      setEmoji(null)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao criar categoria')
@@ -58,7 +61,14 @@ export default function CategoriasPage() {
         <div className="muted" style={{ fontSize: 14 }}>
           {despesas.length + receitas.length} categorias cadastradas
         </div>
-        <Button onClick={() => setOpen(true)}>Nova Categoria</Button>
+        <Button
+          onClick={() => {
+            setEmoji(null)
+            setOpen(true)
+          }}
+        >
+          Nova Categoria
+        </Button>
       </div>
 
       <div className="grid2">
@@ -73,7 +83,7 @@ export default function CategoriasPage() {
                   <div className="rowLabel">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div className="recentTxIcon recentTxIconOut" aria-hidden="true">
-                        <CategoryIcon name={c.name} />
+                        <CategoryIcon name={c.name} emoji={c.emoji} />
                       </div>
                       <div>
                         <div className="rowName">{c.name}</div>
@@ -98,7 +108,7 @@ export default function CategoriasPage() {
                   <div className="rowLabel">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div className="recentTxIcon recentTxIconIn" aria-hidden="true">
-                        <CategoryIcon name={c.name} />
+                        <CategoryIcon name={c.name} emoji={c.emoji} />
                       </div>
                       <div>
                         <div className="rowName">{c.name}</div>
@@ -119,6 +129,7 @@ export default function CategoriasPage() {
           onClose={() => {
             setOpen(false)
             setName('')
+            setEmoji(null)
             setError(null)
             setType('DESPESA')
           }}
@@ -130,6 +141,7 @@ export default function CategoriasPage() {
                 onClick={() => {
                   setOpen(false)
                   setName('')
+                  setEmoji(null)
                   setError(null)
                   setType('DESPESA')
                 }}
@@ -153,6 +165,10 @@ export default function CategoriasPage() {
             <div className="field">
               <div className="label">Nome</div>
               <Input placeholder="Ex: Educação" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <div className="label">Ícone (emoji)</div>
+              <EmojiPickerField value={emoji} onChange={setEmoji} id="category-emoji-search" />
             </div>
           </div>
 

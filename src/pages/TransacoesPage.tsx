@@ -120,12 +120,15 @@ export default function TransacoesPage() {
             .slice()
             .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
             .map((tx) => {
-              const categoryName = data.categories.find((c) => c.id === tx.categoryId)?.name ?? 'Categoria'
+              const cat = data.categories.find((c) => c.id === tx.categoryId)
+              const categoryName = cat?.name ?? 'Categoria'
+              const labelPrefix = cat?.emoji ? `${cat.emoji} ` : ''
               return (
                 <div className="row" key={tx.id}>
                   <div className="rowLabel">
                     <div className="rowName">
                       {tx.type === 'DESPESA' ? 'Despesa: ' : 'Receita: '}
+                      {labelPrefix}
                       {categoryName}
                     </div>
                     <div className="rowHint">{tx.description ? tx.description : `Em ${tx.occurredOn}`}</div>
@@ -168,7 +171,7 @@ export default function TransacoesPage() {
               <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                 {categoriesForType.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.emoji ? `${c.emoji} ${c.name}` : c.name}
                   </option>
                 ))}
               </Select>

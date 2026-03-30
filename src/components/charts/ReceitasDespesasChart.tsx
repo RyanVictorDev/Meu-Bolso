@@ -4,11 +4,9 @@ import { formatBRLFromCents } from '../../domain/finance'
 export default function ReceitasDespesasChart({
   revenuesCents,
   expensesCents,
-  dayLabel,
 }: {
   revenuesCents: number
   expensesCents: number
-  dayLabel: string
 }) {
   const revenues = revenuesCents / 100
   const expenses = expensesCents / 100
@@ -26,19 +24,26 @@ export default function ReceitasDespesasChart({
   }, [expenses, revenues])
 
   const W = 420
-  const H = 190
+  const H = 200
   const paddingLeft = 46
   const paddingTop = 16
-  const paddingBottom = 34
+  const paddingBottom = 40
   const chartH = H - paddingTop - paddingBottom
   const chartW = W - paddingLeft - 16
 
   const baseY = paddingTop + chartH
-  const barW = 120
-  const barX = paddingLeft + (chartW - barW) / 2
+  const barW = 68
+  const gap = 28
+  const pairW = barW * 2 + gap
+  const startX = paddingLeft + (chartW - pairW) / 2
+
+  const revenueBarX = startX
+  const expenseBarX = startX + barW + gap
 
   const revenueY = baseY - revenueHeight
   const expenseY = baseY - Math.max(expenseHeight, 2)
+
+  const labelY = H - 14
 
   return (
     <div className="chartCardInner">
@@ -57,32 +62,46 @@ export default function ReceitasDespesasChart({
           )
         })}
 
-        {/* Revenue bar */}
         <rect
-          x={barX}
+          x={revenueBarX}
           y={revenueY}
           width={barW}
           height={Math.max(revenueHeight, 2)}
-          rx="2"
+          rx="3"
           fill="#22c55e"
         />
 
-        {/* Expense small red line/bar */}
         <rect
-          x={barX}
+          x={expenseBarX}
           y={expenseY}
           width={barW}
           height={Math.max(expenseHeight, 2)}
+          rx="3"
           fill="#ef4444"
-          opacity="0.7"
+          opacity="0.92"
         />
 
-        {/* X axis label */}
-        <text x={paddingLeft + chartW / 2} y={H - 12} fontSize="11" fill="rgba(0,0,0,0.55)" textAnchor="middle">
-          {dayLabel}
+        <text
+          x={revenueBarX + barW / 2}
+          y={labelY}
+          fontSize="11"
+          fill="rgba(0,0,0,0.55)"
+          textAnchor="middle"
+          fontWeight="600"
+        >
+          Receitas
+        </text>
+        <text
+          x={expenseBarX + barW / 2}
+          y={labelY}
+          fontSize="11"
+          fill="rgba(0,0,0,0.55)"
+          textAnchor="middle"
+          fontWeight="600"
+        >
+          Despesas
         </text>
 
-        {/* Accessibility: show tooltip-like values */}
         <title>
           {`Receitas: ${formatBRLFromCents(revenuesCents)}; Despesas: ${formatBRLFromCents(expensesCents)}`}
         </title>
@@ -90,4 +109,3 @@ export default function ReceitasDespesasChart({
     </div>
   )
 }
-

@@ -3,6 +3,7 @@ import type { Budget, Category, FinanceData, Transaction, TransactionType } from
 export interface AddCategoryInput {
   name: string
   type: TransactionType
+  emoji?: string
 }
 
 export interface AddTransactionInput {

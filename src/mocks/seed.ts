@@ -9,6 +9,22 @@ function makeId(name: string) {
 
 export const CURRENT_MONTH = DEFAUL_MONTH
 
+const EXPENSE_EMOJI: Record<string, string> = {
+  Moradia: '🏠',
+  Alimentação: '🍽️',
+  Transporte: '🚗',
+  Saúde: '⚕️',
+  Lazer: '🎉',
+  Educação: '📚',
+  Contas: '📄',
+  Outros: '📌',
+}
+
+const REVENUE_EMOJI: Record<string, string> = {
+  Salário: '💼',
+  Freelance: '💻',
+}
+
 export function getSeedCategories(): Category[] {
   const expenseNames = [
     'Moradia',
@@ -30,11 +46,13 @@ export function getSeedCategories(): Category[] {
       id: makeId(name),
       name,
       type: expenseType,
+      emoji: EXPENSE_EMOJI[name],
     })),
     ...revenueNames.map((name) => ({
       id: makeId(name),
       name,
       type: revenueType,
+      emoji: REVENUE_EMOJI[name],
     })),
   ]
 }

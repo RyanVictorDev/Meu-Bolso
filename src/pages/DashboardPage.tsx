@@ -92,12 +92,6 @@ export default function DashboardPage() {
     }))
   }, [expensesByCategory])
 
-  const dayLabel = useMemo(() => {
-    const first = monthTransactions[0]
-    if (!first) return '26'
-    return first.occurredOn.slice(8, 10)
-  }, [monthTransactions])
-
   const recentTxs = useMemo(() => {
     return monthTransactions
       .slice()
@@ -159,10 +153,7 @@ export default function DashboardPage() {
               <p className="statLabel">Despesas</p>
               <div className="statValue">{formatBRLFromCents(despesasCents)}</div>
             </div>
-            <div
-              className="statIconBadge statIconBadgeGreen"
-              aria-hidden="true"
-            >
+            <div className="statIconBadge statIconBadgeRed" aria-hidden="true">
               <StatIcon variant="out" />
             </div>
           </div>
@@ -188,7 +179,7 @@ export default function DashboardPage() {
           {monthTransactions.length === 0 ? (
             <div className="chartEmpty">Sem transações neste mês</div>
           ) : (
-            <ReceitasDespesasChart revenuesCents={receitasCents} expensesCents={despesasCents} dayLabel={dayLabel} />
+            <ReceitasDespesasChart revenuesCents={receitasCents} expensesCents={despesasCents} />
           )}
         </div>
 
@@ -211,14 +202,15 @@ export default function DashboardPage() {
         ) : (
           <div className="transactionsRecentList">
             {recentTxs.map((tx) => {
-              const categoryName = data.categories.find((c) => c.id === tx.categoryId)?.name ?? 'Categoria'
+              const cat = data.categories.find((c) => c.id === tx.categoryId)
+              const categoryName = cat?.name ?? 'Categoria'
               const sign = tx.type === 'RECEITA' ? '+' : '-'
               const color = tx.type === 'RECEITA' ? '#22c55e' : '#ef4444'
               return (
                 <div className="recentTxRow" key={tx.id}>
                   <div className="recentTxLeft">
                     <div className={`recentTxIcon ${tx.type === 'RECEITA' ? 'recentTxIconIn' : 'recentTxIconOut'}`}>
-                      <CategoryIcon name={categoryName} />
+                      <CategoryIcon name={categoryName} emoji={cat?.emoji} />
                     </div>
                     <div>
                       <div className="recentTxTextTitle">{tx.type === 'RECEITA' ? 'ENTRADA' : 'SAÍDA'}</div>

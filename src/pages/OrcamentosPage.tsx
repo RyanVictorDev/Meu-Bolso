@@ -63,7 +63,10 @@ export default function OrcamentosPage() {
             return (
               <div className="row" key={cat.id}>
                 <div className="rowLabel">
-                  <div className="rowName">{cat.name}</div>
+                  <div className="rowName">
+                    {cat.emoji ? `${cat.emoji} ` : ''}
+                    {cat.name}
+                  </div>
                   <div className="rowHint">Limite mensal</div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

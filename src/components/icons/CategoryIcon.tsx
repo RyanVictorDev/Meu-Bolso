@@ -1,6 +1,15 @@
 import type { ReactNode } from 'react'
 
-export default function CategoryIcon({ name }: { name: string }): ReactNode {
+export default function CategoryIcon({ name, emoji }: { name: string; emoji?: string | null }): ReactNode {
+  const trimmed = emoji?.trim()
+  if (trimmed) {
+    return (
+      <span className="categoryIconEmoji" aria-hidden>
+        {trimmed}
+      </span>
+    )
+  }
+
   const key = name.trim().toLowerCase()
 
   if (key.includes('moradia')) {

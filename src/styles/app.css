@@ -35,6 +35,13 @@
   margin: 0;
 }
 
+.sidebarCollapsed .sidebarBrand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  width: 100%;
+}
+
 .sidebarBrand {
   display: flex;
   align-items: center;
@@ -43,12 +50,17 @@
 }
 
 .sidebarLogo {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.18);
   border: 1px solid rgba(34, 197, 94, 0.45);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(187, 247, 208, 0.95);
 }
 
 .sidebarBrandText {
@@ -255,23 +267,33 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding: 10px 34px 10px 14px;
+  padding: 10px 38px 10px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.02);
+  background-color: rgba(255, 255, 255, 0.85);
   color: var(--text-h);
   font-weight: 600;
   font-size: 13px;
-  background-image: linear-gradient(45deg, transparent 50%, rgba(0, 0, 0, 0.5) 50%),
-    linear-gradient(135deg, rgba(0, 0, 0, 0.5) 50%, transparent 50%);
-  background-position: calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px);
-  background-size: 5px 5px, 5px 5px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: calc(100% - 12px) 50%;
+  background-size: 16px 16px;
   background-repeat: no-repeat;
+}
+
+.monthSelect:hover {
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .monthSelect:focus {
   outline: none;
   border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .statCard {
@@ -338,8 +360,192 @@
   color: rgba(192, 132, 252, 1);
 }
 
+.statIconBadgeRed {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.22);
+  color: rgba(239, 68, 68, 1);
+}
+
 .chartCardInner {
   padding-top: 2px;
+}
+
+.donutChartRoot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 520px) {
+  .donutChartRoot {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+  }
+}
+
+.donutChartSvgWrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(280px, 100%);
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+
+@media (min-width: 520px) {
+  .donutChartSvgWrap {
+    margin: 0;
+    max-width: min(320px, 55%);
+  }
+}
+
+.donutChartSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.donutChartLegend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.donutChartLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.donutChartLegendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.donutChartLegendText {
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.donutChartLegendPct {
+  color: var(--text-h);
+  font-weight: 700;
+}
+
+.categoryIconEmoji {
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emojiPickerField {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emojiPickerToolbar {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.emojiPickerToolbar .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.emojiPickerClear {
+  flex-shrink: 0;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.02);
+  color: var(--text-h);
+  font-weight: 650;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.emojiPickerClear:hover:not(:disabled) {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.emojiPickerClear:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.emojiPickerCurrent {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.emojiPickerCurrentSymbol {
+  font-size: 20px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.emojiPickerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.emojiPickerCell {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.emojiPickerCell:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.emojiPickerCellSelected {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  transform: scale(1.06);
+}
+
+.emojiPickerEmpty {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 8px 4px;
 }
 
 .chartEmpty {
@@ -587,17 +793,46 @@
 
 .input,
 .select {
-  padding: 10px 12px;
+  padding: 11px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.01);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--text-h);
   outline: none;
+  font-size: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+  color: rgba(107, 114, 128, 0.75);
+}
+
+.input:hover,
+.select:hover {
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .input:focus,
 .select:focus {
   border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: calc(100% - 12px) 50%;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
 }
 
 .modalOverlay {

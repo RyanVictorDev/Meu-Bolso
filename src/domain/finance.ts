@@ -6,6 +6,8 @@ export interface Category {
   id: string
   name: string
   type: CategoryType
+  /** Optional display emoji chosen by the user */
+  emoji?: string
 }
 
 export interface Transaction {
