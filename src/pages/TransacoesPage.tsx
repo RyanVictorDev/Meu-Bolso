@@ -9,6 +9,7 @@ import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import Select from '../components/ui/Select'
 import PillTabs from '../components/ui/PillTabs'
+import PageLoader from '../components/PageLoader'
 
 const FILTER_TABS = [{ value: 'TODOS' as const, label: 'Todos' }]
 
@@ -88,7 +89,7 @@ export default function TransacoesPage() {
       <>
         <h1 className="pageTitle">Gerencie suas receitas e despesas</h1>
         <div className="card">
-          <div className="muted">Carregando...</div>
+          <PageLoader />
         </div>
       </>
     )

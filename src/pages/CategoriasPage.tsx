@@ -8,6 +8,7 @@ import Modal from '../components/ui/Modal'
 import Select from '../components/ui/Select'
 import EmojiPickerField from '../components/ui/EmojiPickerField'
 import CategoryIcon from '../components/icons/CategoryIcon'
+import PageLoader from '../components/PageLoader'
 
 export default function CategoriasPage() {
   const { loading, data, addCategory } = useFinance()
@@ -47,7 +48,7 @@ export default function CategoriasPage() {
       <>
         <h1 className="pageTitle">Organize suas receitas e despesas</h1>
         <div className="card">
-          <div className="muted">Carregando...</div>
+          <PageLoader />
         </div>
       </>
     )

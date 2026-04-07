@@ -1,6 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
+import ThemeAppearance from './ThemeAppearance'
 
 type AppShellProps = PropsWithChildren
 
@@ -99,6 +100,7 @@ function NavItem({
 }
 
 export default function AppShell({ children }: AppShellProps) {
+  const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -167,9 +169,14 @@ export default function AppShell({ children }: AppShellProps) {
             </svg>
           </button>
           <div className="topbarSpacer" />
+          <div className="topbarActions">
+            <ThemeAppearance />
+          </div>
         </div>
         <div className="content">
-          <div className="contentInner">{children}</div>
+          <div className="contentInner" key={location.pathname}>
+            <div className="pageEnter">{children}</div>
+          </div>
         </div>
       </main>
     </div>
