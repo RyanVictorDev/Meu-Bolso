@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 
 export default function Modal({
@@ -20,7 +21,15 @@ export default function Modal({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
-  return (
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
+  return createPortal(
     <div
       className="modalOverlay"
       role="dialog"
@@ -40,7 +49,8 @@ export default function Modal({
         <div className="modalBody">{children}</div>
         {footer ? <div className="modalFooter">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

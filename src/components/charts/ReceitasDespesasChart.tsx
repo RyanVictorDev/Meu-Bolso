@@ -1,5 +1,10 @@
 import { useMemo } from 'react'
 import { formatBRLFromCents } from '../../domain/finance'
+import { useChartCssColors } from '../../theme/useChartCssColors'
+
+/** Cores semânticas fixas (não seguem tema nem acento da UI) */
+const REVENUE_BAR = '#22c55e'
+const EXPENSE_BAR = '#ef4444'
 
 export default function ReceitasDespesasChart({
   revenuesCents,
@@ -8,6 +13,7 @@ export default function ReceitasDespesasChart({
   revenuesCents: number
   expensesCents: number
 }) {
+  const { grid, label } = useChartCssColors()
   const revenues = revenuesCents / 100
   const expenses = expensesCents / 100
 
@@ -54,8 +60,8 @@ export default function ReceitasDespesasChart({
           const y = paddingTop + (1 - t / roundedMax) * chartH
           return (
             <g key={idx}>
-              <line x1={paddingLeft} y1={y} x2={W - 10} y2={y} stroke="rgba(0,0,0,0.10)" />
-              <text x={paddingLeft - 8} y={y + 4} fontSize="11" fill="rgba(0,0,0,0.55)" textAnchor="end">
+              <line x1={paddingLeft} y1={y} x2={W - 10} y2={y} stroke={grid} />
+              <text x={paddingLeft - 8} y={y + 4} fontSize="11" fill={label} textAnchor="end">
                 {Math.round(t).toLocaleString('pt-BR')}
               </text>
             </g>
@@ -68,7 +74,7 @@ export default function ReceitasDespesasChart({
           width={barW}
           height={Math.max(revenueHeight, 2)}
           rx="3"
-          fill="#22c55e"
+          fill={REVENUE_BAR}
         />
 
         <rect
@@ -77,28 +83,14 @@ export default function ReceitasDespesasChart({
           width={barW}
           height={Math.max(expenseHeight, 2)}
           rx="3"
-          fill="#ef4444"
+          fill={EXPENSE_BAR}
           opacity="0.92"
         />
 
-        <text
-          x={revenueBarX + barW / 2}
-          y={labelY}
-          fontSize="11"
-          fill="rgba(0,0,0,0.55)"
-          textAnchor="middle"
-          fontWeight="600"
-        >
+        <text x={revenueBarX + barW / 2} y={labelY} fontSize="11" fill={label} textAnchor="middle" fontWeight="600">
           Receitas
         </text>
-        <text
-          x={expenseBarX + barW / 2}
-          y={labelY}
-          fontSize="11"
-          fill="rgba(0,0,0,0.55)"
-          textAnchor="middle"
-          fontWeight="600"
-        >
+        <text x={expenseBarX + barW / 2} y={labelY} fontSize="11" fill={label} textAnchor="middle" fontWeight="600">
           Despesas
         </text>
 

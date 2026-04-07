@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useChartCssColors } from '../../theme/useChartCssColors'
 
 type Segment = { label: string; valueCents: number; color: string }
 
@@ -10,6 +11,7 @@ const strokeWidth = 22
 const innerR = 48
 
 export default function DespesasPorCategoriaDonutChart({ segments }: { segments: Segment[] }) {
+  const { surface, donutTrack } = useChartCssColors()
   const total = segments.reduce((acc, s) => acc + s.valueCents, 0)
 
   const { circumference, dashParts } = useMemo(() => {
@@ -36,14 +38,7 @@ export default function DespesasPorCategoriaDonutChart({ segments }: { segments:
           role="img"
           aria-label="Despesas por Categoria"
         >
-          <circle
-            cx={cx}
-            cy={cy}
-            r={r}
-            stroke="rgba(234, 179, 8, 0.18)"
-            strokeWidth={strokeWidth}
-            fill="none"
-          />
+          <circle cx={cx} cy={cy} r={r} stroke={donutTrack} strokeWidth={strokeWidth} fill="none" />
           <g transform={`rotate(-90 ${cx} ${cy})`}>
             {dashParts.map((p, idx) => (
               <circle
@@ -60,7 +55,7 @@ export default function DespesasPorCategoriaDonutChart({ segments }: { segments:
               />
             ))}
           </g>
-          <circle cx={cx} cy={cy} r={innerR} fill="var(--bg, #fff)" />
+          <circle cx={cx} cy={cy} r={innerR} fill={surface} />
         </svg>
       </div>
 

@@ -5,6 +5,7 @@ import { useFinance } from '../services/useFinance'
 import ReceitasDespesasChart from '../components/charts/ReceitasDespesasChart'
 import DespesasPorCategoriaDonutChart from '../components/charts/DespesasPorCategoriaDonutChart'
 import CategoryIcon from '../components/icons/CategoryIcon'
+import DashboardSkeleton from '../components/DashboardSkeleton'
 
 type TxType = 'RECEITA' | 'DESPESA'
 
@@ -100,19 +101,7 @@ export default function DashboardPage() {
   }, [monthTransactions])
 
   if (loading || !data) {
-    return (
-      <>
-        <div className="pageHeaderRow">
-          <div>
-            <h1 className="pageTitle">Dashboard</h1>
-            <div className="pageSubtitle">Visão geral das suas finanças</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="muted">Carregando...</div>
-        </div>
-      </>
-    )
+    return <DashboardSkeleton />
   }
 
   return (
@@ -205,7 +194,6 @@ export default function DashboardPage() {
               const cat = data.categories.find((c) => c.id === tx.categoryId)
               const categoryName = cat?.name ?? 'Categoria'
               const sign = tx.type === 'RECEITA' ? '+' : '-'
-              const color = tx.type === 'RECEITA' ? '#22c55e' : '#ef4444'
               return (
                 <div className="recentTxRow" key={tx.id}>
                   <div className="recentTxLeft">
@@ -220,7 +208,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div style={{ fontWeight: 900, color, fontSize: 13 }}>
+                  <div className={tx.type === 'RECEITA' ? 'recentTxAmountIn' : 'recentTxAmountOut'}>
                     {sign} {formatBRLFromCents(tx.amountCents)}
                   </div>
                 </div>

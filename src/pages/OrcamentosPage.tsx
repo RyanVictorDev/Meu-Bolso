@@ -5,6 +5,7 @@ import { useFinance } from '../services/useFinance'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
+import PageLoader from '../components/PageLoader'
 
 export default function OrcamentosPage() {
   const { loading, data, setBudgetLimit, resetToSeed } = useFinance()
@@ -32,7 +33,7 @@ export default function OrcamentosPage() {
       <>
         <h1 className="pageTitle">Orçamentos</h1>
         <div className="card">
-          <div className="muted">Carregando...</div>
+          <PageLoader />
         </div>
       </>
     )

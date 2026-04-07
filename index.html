@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -7,6 +7,23 @@
     <title>meubolso</title>
   </head>
   <body>
+    <script>
+      ;(function () {
+        try {
+          var raw = localStorage.getItem('meubolso_ui_v1')
+          if (!raw) return
+          var o = JSON.parse(raw)
+          if (o.mode === 'light' || o.mode === 'dark') {
+            document.documentElement.dataset.theme = o.mode
+          }
+          if (typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent.trim())) {
+            document.documentElement.style.setProperty('--accent', o.accent.trim().toLowerCase())
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
