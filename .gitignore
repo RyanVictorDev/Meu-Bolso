@@ -1,24 +1,48 @@
+# Ambiente e segredos (mantenha .env.example versionado)
+.env
+.env.local
+.env.*.local
+
+# Frontend (Vite / React)
+MeuBolsoFront/node_modules/
+MeuBolsoFront/dist/
+MeuBolsoFront/dist-ssr/
+MeuBolsoFront/.vite/
+MeuBolsoFront/coverage/
+MeuBolsoFront/*.tsbuildinfo
+
+# Backend (Maven / Spring Boot)
+v1/v1/target/
+v1/v1/.mvn/wrapper/maven-wrapper.jar
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# SO
+.DS_Store
+Thumbs.db
+Desktop.ini
 
-# Editor directories and files
+# IDEs e editores
+.idea/
+*.iml
+*.ipr
+*.iws
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Ferramentas / cache
+*.class
+.cache/
+.temp/
+tmp/
