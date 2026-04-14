@@ -65,6 +65,8 @@ npm install
 npm run dev
 ```
 
+**Atualizar a página (F5) em rotas como `/transacoes`:** com `npm run dev`, o Vite já trata SPA. Se você usa o **frontend no Docker (Nginx)**, o fallback para `index.html` está em `MeuBolsoFront/nginx.conf` (evita 404 ao dar refresh em rota interna).
+
 ## Fluxo implementado
 
 - Login e cadastro com JWT (`/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`)
