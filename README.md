@@ -1,74 +1,127 @@
-# React + TypeScript + Vite
+# MeuBolso - Front + Backend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacao de controle financeiro pessoal com frontend React e backend Spring Boot com autenticacao JWT.
 
-Currently, two official plugins are available:
+## Estrutura
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `MeuBolsoFront/`: frontend React + Vite
+- `v1/v1/`: backend Spring Boot + PostgreSQL + Flyway
 
-## React Compiler
+## Requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 20+
+- Java 17+
+- Maven Wrapper (`mvnw`) ja incluso
+- PostgreSQL 14+
 
-## Expanding the ESLint configuration
+## Backend (Spring Boot)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Diretorio:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd v1/v1
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Variaveis de ambiente principais:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `SERVER_PORT` (default `2030`)
+- `DB_URL` (default `jdbc:postgresql://localhost:5432/meubolso`)
+- `DB_USER` (default `postgres`)
+- `DB_PASSWORD` (default `postgres`)
+- `JWT_SECRET` (obrigatorio em producao, minimo recomendado 64+ caracteres)
+- `JWT_ACCESS_MINUTES` (default `30`)
+- `JWT_REFRESH_DAYS` (default `14`)
+- `CORS_ALLOWED_ORIGINS` (default `http://localhost:5173`)
+- `APP_SEED_ADMIN_NAME` (default `Administrador`)
+- `APP_SEED_ADMIN_EMAIL` (default `admin@gggg.com`)
+- `APP_SEED_ADMIN_PASSWORD` (default `admin@gggg.com`)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Executar:
+
+```bash
+./mvnw spring-boot:run
 ```
-# Meu-Bolso
+
+Swagger/OpenAPI:
+
+- `http://localhost:2030/swagger-ui/index.html`
+
+## Frontend (React)
+
+Diretorio:
+
+```bash
+cd MeuBolsoFront
+```
+
+Variavel opcional:
+
+- `VITE_API_URL` (default `http://localhost:2030`)
+
+Executar:
+
+```bash
+npm install
+npm run dev
+```
+
+## Fluxo implementado
+
+- Login e cadastro com JWT (`/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`)
+- Rotas privadas no frontend com redirecionamento para `/login`
+- Dashboard, categorias, transacoes e orcamentos consumindo API real
+- Reset de dados por usuario (`POST /api/finance/reset`)
+- Seed automatica de admin:
+  - Email: `admin@gggg.com`
+  - Senha: `admin@gggg.com`
+
+## Docker Compose (stack completa)
+
+Arquivos adicionados:
+
+- `docker-compose.yml` (root)
+- `.env.example` (root)
+- `v1/v1/Dockerfile`
+- `MeuBolsoFront/Dockerfile`
+
+Passos:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+Acessos:
+
+- Frontend: `http://localhost:5173`
+- Backend (API): `http://localhost:2030`
+- Swagger: `http://localhost:2030/swagger-ui/index.html`
+
+Parar stack:
+
+```bash
+docker compose down
+```
+
+Parar e remover volume do Postgres:
+
+```bash
+docker compose down -v
+```
+
+## Testes
+
+Backend:
+
+```bash
+cd v1/v1
+./mvnw test
+```
+
+Frontend:
+
+```bash
+cd MeuBolsoFront
+npm run lint
+npm run build
+```
