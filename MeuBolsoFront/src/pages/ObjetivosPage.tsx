@@ -12,6 +12,7 @@ import { useEnvironment } from '../services/useEnvironment'
 import { useFinance } from '../services/useFinance'
 import ActionIconButton from '../components/ui/ActionIconButton'
 import Button from '../components/ui/Button'
+import DateInput from '../components/ui/DateInput'
 import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
@@ -237,7 +238,7 @@ export default function ObjetivosPage() {
           <div className="fieldGrid">
             <div className="field">
               <div className="label">Prazo</div>
-              <Input type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} min={today} required />
+              <DateInput value={dueOn} onChange={setDueOn} min={today} required />
             </div>
             <div className="field">
               <div className="label">Descrição</div>
@@ -276,13 +277,7 @@ export default function ObjetivosPage() {
             </div>
             <div className="field">
               <div className="label">Data</div>
-              <Input
-                type="date"
-                value={contributionDate}
-                onChange={(e) => setContributionDate(e.target.value)}
-                max={contributionMaxDate}
-                required
-              />
+              <DateInput value={contributionDate} onChange={setContributionDate} max={contributionMaxDate} required />
             </div>
           </div>
           <div style={{ height: 12 }} />

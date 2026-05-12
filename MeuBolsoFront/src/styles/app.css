@@ -2088,6 +2088,242 @@
   justify-content: center;
 }
 
+.dateControl {
+  position: relative;
+  width: 100%;
+}
+
+.dateControlOpen {
+  z-index: 90;
+}
+
+.dateTrigger {
+  width: 100%;
+  min-height: 42px;
+  padding: 11px 12px 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text-h);
+  cursor: pointer;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.dateTrigger:hover,
+.dateControlOpen .dateTrigger {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.dateTrigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  background: var(--surface-muted);
+}
+
+.dateTriggerValue,
+.dateTriggerPlaceholder {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dateTriggerPlaceholder {
+  color: var(--input-placeholder);
+}
+
+.dateTriggerIcon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dateTrigger:hover .dateTriggerIcon,
+.dateControlOpen .dateTriggerIcon {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.dateMenu {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(320px, calc(100vw - 48px));
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: selectMenuIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dateMenuHeader {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.dateMonthLabel {
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 850;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.dateNavBtn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-elevated);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dateNavBtn:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.dateWeekdays,
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.dateWeekdays {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.dateWeekdays span {
+  padding: 6px 0;
+}
+
+.dateGrid {
+  gap: 4px;
+}
+
+.dateDay {
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-h);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.dateDay:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.dateDay:active {
+  transform: scale(0.96);
+}
+
+.dateDayMuted {
+  color: var(--muted);
+  opacity: 0.58;
+}
+
+.dateDayToday {
+  border-color: var(--accent-border);
+}
+
+.dateDaySelected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.dateDaySelected:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.dateDay:disabled {
+  cursor: not-allowed;
+  opacity: 0.32;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.dateMenuFooter {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dateFooterBtn {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 7px 8px;
+  border-radius: 10px;
+}
+
+.dateFooterBtn:hover {
+  background: var(--accent-bg);
+}
+
+.dateFooterBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: transparent;
+}
+
 .input[type='date'] {
   appearance: auto;
   -webkit-appearance: auto;
@@ -2210,7 +2446,11 @@
 .smallBtn:focus-visible,
 .btn:focus-visible,
 .input:focus-visible,
-.select:focus-visible {
+.select:focus-visible,
+.dateTrigger:focus-visible,
+.dateDay:focus-visible,
+.dateNavBtn:focus-visible,
+.dateFooterBtn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

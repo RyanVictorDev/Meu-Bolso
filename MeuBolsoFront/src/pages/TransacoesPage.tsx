@@ -13,6 +13,7 @@ import { useFinance } from '../services/useFinance'
 import { useEnvironment } from '../services/useEnvironment'
 import Button from '../components/ui/Button'
 import ActionIconButton from '../components/ui/ActionIconButton'
+import DateInput from '../components/ui/DateInput'
 import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
@@ -252,7 +253,7 @@ export default function TransacoesPage() {
             </div>
             <div className="field">
               <div className="label">Data</div>
-              <Input type="date" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} required />
+              <DateInput value={occurredOn} onChange={setOccurredOn} required />
             </div>
           </div>
 
