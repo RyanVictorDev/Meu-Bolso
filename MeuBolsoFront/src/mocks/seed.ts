@@ -17,6 +17,8 @@ const EXPENSE_EMOJI: Record<string, string> = {
   Lazer: '🎉',
   Educação: '📚',
   Contas: '📄',
+  Mercado: '🛒',
+  Assinaturas: '📺',
   Outros: '📌',
 }
 
@@ -34,6 +36,8 @@ export function getSeedCategories(): Category[] {
     'Lazer',
     'Educação',
     'Contas',
+    'Mercado',
+    'Assinaturas',
     'Outros',
   ]
   const revenueNames = ['Salário', 'Freelance']
@@ -82,7 +86,9 @@ export function getSeedTransactions(): Transaction[] {
   const occurredOn = '2026-03-26'
 
   const freelanceCategoryId = makeId('Freelance')
-  const alimentacaoCategoryId = makeId('Alimentação')
+  const moradiaCategoryId = makeId('Moradia')
+  const mercadoCategoryId = makeId('Mercado')
+  const transporteCategoryId = makeId('Transporte')
 
   return [
     {
@@ -95,12 +101,30 @@ export function getSeedTransactions(): Transaction[] {
       createdAt: now,
     },
     {
-      id: 'seed_tx_teste',
+      id: 'seed_tx_aluguel',
       type: 'DESPESA',
-      categoryId: alimentacaoCategoryId,
-      description: 'Teste',
-      amountCents: 12300, // R$ 123,00
-      occurredOn,
+      categoryId: moradiaCategoryId,
+      description: 'Aluguel',
+      amountCents: 120000, // R$ 1.200,00
+      occurredOn: '2026-03-07',
+      createdAt: now,
+    },
+    {
+      id: 'seed_tx_mercado',
+      type: 'DESPESA',
+      categoryId: mercadoCategoryId,
+      description: 'Compra do mês',
+      amountCents: 68550, // R$ 685,50
+      occurredOn: '2026-03-12',
+      createdAt: now,
+    },
+    {
+      id: 'seed_tx_transporte',
+      type: 'DESPESA',
+      categoryId: transporteCategoryId,
+      description: 'Combustível e transporte',
+      amountCents: 32000, // R$ 320,00
+      occurredOn: '2026-02-20',
       createdAt: now,
     },
   ]

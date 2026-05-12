@@ -1,6 +1,8 @@
 package com.meubolso.v1.finance;
 
 import com.meubolso.v1.common.ApiException;
+import com.meubolso.v1.environment.EnvironmentEntity;
+import com.meubolso.v1.environment.EnvironmentService;
 import com.meubolso.v1.finance.dto.AddCategoryRequest;
 import com.meubolso.v1.finance.dto.AddTransactionRequest;
 import com.meubolso.v1.finance.dto.BudgetDto;
@@ -9,10 +11,12 @@ import com.meubolso.v1.finance.dto.DashboardResponse;
 import com.meubolso.v1.finance.dto.FinanceDataResponse;
 import com.meubolso.v1.finance.dto.SetBudgetLimitRequest;
 import com.meubolso.v1.finance.dto.TransactionDto;
+import com.meubolso.v1.finance.dto.UpdateTransactionRequest;
+import com.meubolso.v1.finance.dto.UserSummaryDto;
+import com.meubolso.v1.goal.GoalService;
 import com.meubolso.v1.user.UserAccount;
 import com.meubolso.v1.user.UserAccountRepository;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
@@ -29,22 +33,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FinanceService {
-    private static final List<String> SEED_EXPENSES = List.of(
-        "Moradia",
-        "Alimentação",
-        "Transporte",
-        "Saúde",
-        "Lazer",
-        "Educação",
-        "Contas",
-        "Outros"
-    );
-    private static final List<String> SEED_REVENUES = List.of("Salário", "Freelance");
-
     private final UserAccountRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
+    private final EnvironmentService environmentService;
+    private final DefaultFinanceSeedService seedService;
+    private final GoalService goalService;
     private final Clock clock;
 
     public FinanceService(
@@ -52,35 +47,57 @@ public class FinanceService {
         CategoryRepository categoryRepository,
         TransactionRepository transactionRepository,
         BudgetRepository budgetRepository,
+        EnvironmentService environmentService,
+        DefaultFinanceSeedService seedService,
+        GoalService goalService,
         Clock clock
     ) {
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.transactionRepository = transactionRepository;
         this.budgetRepository = budgetRepository;
+        this.environmentService = environmentService;
+        this.seedService = seedService;
+        this.goalService = goalService;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public FinanceDataResponse load(UUID userId) {
-        List<CategoryDto> categories = categoryRepository.findByUserIdOrderByNameAsc(userId).stream().map(this::toCategoryDto).toList();
-        List<TransactionDto> transactions = getTransactions(userId, null);
+        return load(userId, null);
+    }
+
+    @Transactional
+    public FinanceDataResponse load(UUID userId, UUID environmentId) {
+        EnvironmentEntity environment = environmentService.requireAccess(userId, environmentId).getEnvironment();
+        List<CategoryDto> categories = categoryRepository.findByEnvironmentIdOrderByNameAsc(environment.getId()).stream().map(this::toCategoryDto).toList();
+        if (categories.isEmpty()) {
+            seedService.ensureDefaultCategories(environment, requiredUser(userId));
+            categories = categoryRepository.findByEnvironmentIdOrderByNameAsc(environment.getId()).stream().map(this::toCategoryDto).toList();
+        }
+        List<TransactionDto> transactions = getTransactions(userId, environment.getId(), null);
         List<BudgetDto> budgets = budgetRepository
-            .findByUserIdOrderByMonthDesc(userId)
+            .findByEnvironmentIdOrderByMonthDesc(environment.getId())
             .stream()
             .sorted(Comparator.comparing(BudgetEntity::getMonth).reversed())
             .map(this::toBudgetDto)
             .toList();
-        return new FinanceDataResponse(categories, transactions, budgets);
+        return new FinanceDataResponse(categories, transactions, budgets, goalService.list(userId, environment.getId()));
     }
 
     @Transactional
     public CategoryDto addCategory(UUID userId, AddCategoryRequest request) {
+        return addCategory(userId, null, request);
+    }
+
+    @Transactional
+    public CategoryDto addCategory(UUID userId, UUID environmentId, AddCategoryRequest request) {
+        EnvironmentEntity environment = environmentService.requireEditor(userId, environmentId).getEnvironment();
         UserAccount user = requiredUser(userId);
         String name = request.name().trim();
         String normalizedName = name.toLowerCase(Locale.ROOT);
         return categoryRepository
-            .findByUserIdAndTypeAndNormalizedName(userId, request.type(), normalizedName)
+            .findByEnvironmentIdAndTypeAndNormalizedName(environment.getId(), request.type(), normalizedName)
             .map(this::toCategoryDto)
             .orElseGet(() -> {
                 CategoryEntity created = categoryRepository.save(
@@ -88,6 +105,7 @@ public class FinanceService {
                         .builder()
                         .id(UUID.randomUUID())
                         .user(user)
+                        .environment(environment)
                         .name(name)
                         .normalizedName(normalizedName)
                         .type(request.type())
@@ -98,13 +116,14 @@ public class FinanceService {
                 if (request.type() == TransactionType.DESPESA) {
                     String currentMonth = YearMonth.now(clock).toString();
                     budgetRepository
-                        .findByUserIdAndMonthAndCategoryId(userId, currentMonth, created.getId())
+                        .findByEnvironmentIdAndMonthAndCategoryId(environment.getId(), currentMonth, created.getId())
                         .orElseGet(() ->
                             budgetRepository.save(
                                 BudgetEntity
                                     .builder()
                                     .id(UUID.randomUUID())
                                     .user(user)
+                                    .environment(environment)
                                     .month(currentMonth)
                                     .category(created)
                                     .limitCents(0)
@@ -119,19 +138,27 @@ public class FinanceService {
 
     @Transactional
     public TransactionDto addTransaction(UUID userId, AddTransactionRequest request) {
+        return addTransaction(userId, null, request);
+    }
+
+    @Transactional
+    public TransactionDto addTransaction(UUID userId, UUID environmentId, AddTransactionRequest request) {
+        EnvironmentEntity environment = environmentService.requireEditor(userId, environmentId).getEnvironment();
         UserAccount user = requiredUser(userId);
         CategoryEntity category = categoryRepository
-            .findByIdAndUserId(request.categoryId(), userId)
+            .findByIdAndEnvironmentId(request.categoryId(), environment.getId())
             .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Invalid category"));
         if (category.getType() != request.type()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Transaction type must match category type");
         }
-        LocalDate occurredOn = parseDate(request.occurredOn());
+        LocalDate occurredOn = parseTransactionDate(request.occurredOn());
         TransactionEntity tx = transactionRepository.save(
             TransactionEntity
                 .builder()
                 .id(UUID.randomUUID())
                 .user(user)
+                        .environment(environment)
+                        .createdByUser(user)
                 .type(request.type())
                 .category(category)
                 .description(normalizeDescription(request.description()))
@@ -145,11 +172,17 @@ public class FinanceService {
 
     @Transactional(readOnly = true)
     public List<TransactionDto> getTransactions(UUID userId, String month) {
+        return getTransactions(userId, null, month);
+    }
+
+    @Transactional
+    public List<TransactionDto> getTransactions(UUID userId, UUID environmentId, String month) {
+        EnvironmentEntity environment = environmentService.requireAccess(userId, environmentId).getEnvironment();
         if (month == null || month.isBlank()) {
             LocalDate start = LocalDate.of(2000, 1, 1);
             LocalDate end = LocalDate.of(2200, 12, 31);
             return transactionRepository
-                .findByUserIdAndOccurredOnBetweenOrderByOccurredOnDesc(userId, start, end)
+                .findByEnvironmentIdAndOccurredOnBetweenOrderByOccurredOnDesc(environment.getId(), start, end)
                 .stream()
                 .map(this::toTransactionDto)
                 .toList();
@@ -158,25 +191,69 @@ public class FinanceService {
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
         return transactionRepository
-            .findByUserIdAndOccurredOnBetweenOrderByOccurredOnDesc(userId, start, end)
+            .findByEnvironmentIdAndOccurredOnBetweenOrderByOccurredOnDesc(environment.getId(), start, end)
             .stream()
             .map(this::toTransactionDto)
             .toList();
     }
 
     @Transactional
+    public TransactionDto getTransaction(UUID userId, UUID environmentId, UUID transactionId) {
+        EnvironmentEntity environment = environmentService.requireAccess(userId, environmentId).getEnvironment();
+        return transactionRepository
+            .findByIdAndEnvironmentId(transactionId, environment.getId())
+            .map(this::toTransactionDto)
+            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Transação não encontrada"));
+    }
+
+    @Transactional
+    public TransactionDto updateTransaction(UUID userId, UUID environmentId, UUID transactionId, UpdateTransactionRequest request) {
+        EnvironmentEntity environment = environmentService.requireEditor(userId, environmentId).getEnvironment();
+        TransactionEntity transaction = transactionRepository
+            .findByIdAndEnvironmentId(transactionId, environment.getId())
+            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Transação não encontrada"));
+        CategoryEntity category = categoryRepository
+            .findByIdAndEnvironmentId(request.categoryId(), environment.getId())
+            .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Invalid category"));
+        if (category.getType() != request.type()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Transaction type must match category type");
+        }
+        transaction.setType(request.type());
+        transaction.setCategory(category);
+        transaction.setDescription(normalizeDescription(request.description()));
+        transaction.setAmountCents(request.amountCents());
+        transaction.setOccurredOn(parseTransactionDate(request.occurredOn()));
+        return toTransactionDto(transactionRepository.save(transaction));
+    }
+
+    @Transactional
+    public void deleteTransaction(UUID userId, UUID environmentId, UUID transactionId) {
+        EnvironmentEntity environment = environmentService.requireEditor(userId, environmentId).getEnvironment();
+        TransactionEntity transaction = transactionRepository
+            .findByIdAndEnvironmentId(transactionId, environment.getId())
+            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Transação não encontrada"));
+        transactionRepository.delete(transaction);
+    }
+
+    @Transactional
     public BudgetDto setBudgetLimit(UUID userId, SetBudgetLimitRequest request) {
+        return setBudgetLimit(userId, null, request);
+    }
+
+    @Transactional
+    public BudgetDto setBudgetLimit(UUID userId, UUID environmentId, SetBudgetLimitRequest request) {
+        EnvironmentEntity environment = environmentService.requireEditor(userId, environmentId).getEnvironment();
         UserAccount user = requiredUser(userId);
         YearMonth month = parseMonth(request.month());
         CategoryEntity category = categoryRepository
-            .findByIdAndUserId(request.categoryId(), userId)
+            .findByIdAndEnvironmentId(request.categoryId(), environment.getId())
             .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Invalid category"));
         if (category.getType() != TransactionType.DESPESA) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Budget only allowed for DESPESA categories");
         }
 
         BudgetEntity budget = budgetRepository
-            .findByUserIdAndMonthAndCategoryId(userId, month.toString(), category.getId())
+            .findByEnvironmentIdAndMonthAndCategoryId(environment.getId(), month.toString(), category.getId())
             .map(existing -> {
                 existing.setLimitCents(Math.max(0, request.limitCents()));
                 return existing;
@@ -186,6 +263,7 @@ public class FinanceService {
                     .builder()
                     .id(UUID.randomUUID())
                     .user(user)
+                    .environment(environment)
                     .month(month.toString())
                     .category(category)
                     .limitCents(Math.max(0, request.limitCents()))
@@ -198,14 +276,28 @@ public class FinanceService {
 
     @Transactional(readOnly = true)
     public DashboardResponse dashboard(UUID userId, String monthRaw) {
+        return dashboard(userId, null, monthRaw);
+    }
+
+    @Transactional
+    public DashboardResponse dashboard(UUID userId, UUID environmentId, String monthRaw) {
+        EnvironmentEntity environment = environmentService.requireAccess(userId, environmentId).getEnvironment();
         YearMonth month = parseMonth(monthRaw);
         LocalDate start = month.atDay(1);
         LocalDate end = month.atEndOfMonth();
-        List<TransactionEntity> monthTx = transactionRepository.findByUserIdAndOccurredOnBetweenOrderByOccurredOnDesc(userId, start, end);
+        List<TransactionEntity> monthTx = transactionRepository.findByEnvironmentIdAndOccurredOnBetweenOrderByOccurredOnDesc(environment.getId(), start, end);
         long receitas = monthTx.stream().filter(t -> t.getType() == TransactionType.RECEITA).mapToLong(TransactionEntity::getAmountCents).sum();
         long despesas = monthTx.stream().filter(t -> t.getType() == TransactionType.DESPESA).mapToLong(TransactionEntity::getAmountCents).sum();
 
-        List<BudgetEntity> budgets = budgetRepository.findByUserIdAndMonthOrderByCategoryNameAsc(userId, month.toString());
+        YearMonth previousMonth = month.minusMonths(1);
+        List<TransactionEntity> previousTx = transactionRepository.findByEnvironmentIdAndOccurredOnBetweenOrderByOccurredOnDesc(
+            environment.getId(),
+            previousMonth.atDay(1),
+            previousMonth.atEndOfMonth()
+        );
+        long previousDespesas = previousTx.stream().filter(t -> t.getType() == TransactionType.DESPESA).mapToLong(TransactionEntity::getAmountCents).sum();
+
+        List<BudgetEntity> budgets = budgetRepository.findByEnvironmentIdAndMonthOrderByCategoryNameAsc(environment.getId(), month.toString());
         long budgetTotal = budgets.stream().mapToLong(BudgetEntity::getLimitCents).sum();
 
         Map<UUID, Long> byCategory = monthTx
@@ -232,93 +324,33 @@ public class FinanceService {
             receitas - despesas,
             budgetTotal,
             budgetTotal > 0 && despesas <= budgetTotal,
+            previousDespesas,
+            despesas - previousDespesas,
             items
         );
     }
 
     @Transactional
     public FinanceDataResponse resetToSeed(UUID userId) {
+        return resetToSeed(userId, null);
+    }
+
+    @Transactional
+    public FinanceDataResponse resetToSeed(UUID userId, UUID environmentId) {
+        EnvironmentEntity environment = environmentService.requireEditor(userId, environmentId).getEnvironment();
         UserAccount user = requiredUser(userId);
         LocalDate start = LocalDate.of(2000, 1, 1);
         LocalDate end = LocalDate.of(2200, 12, 31);
-        List<TransactionEntity> transactions = transactionRepository.findByUserIdAndOccurredOnBetweenOrderByOccurredOnDesc(userId, start, end);
+        List<TransactionEntity> transactions = transactionRepository.findByEnvironmentIdAndOccurredOnBetweenOrderByOccurredOnDesc(
+            environment.getId(),
+            start,
+            end
+        );
         transactionRepository.deleteAll(transactions);
-        budgetRepository.deleteAll(budgetRepository.findByUserIdOrderByMonthDesc(userId));
-        categoryRepository.deleteAll(categoryRepository.findByUserIdOrderByNameAsc(userId));
-
-        Instant now = clock.instant();
-        String month = YearMonth.now(clock).toString();
-        List<CategoryEntity> categories = new ArrayList<>();
-        for (String name : SEED_EXPENSES) {
-            categories.add(
-                categoryRepository.save(
-                    CategoryEntity
-                        .builder()
-                        .id(UUID.randomUUID())
-                        .user(user)
-                        .name(name)
-                        .normalizedName(name.toLowerCase(Locale.ROOT))
-                        .type(TransactionType.DESPESA)
-                        .createdAt(now)
-                        .build()
-                )
-            );
-        }
-        for (String name : SEED_REVENUES) {
-            categories.add(
-                categoryRepository.save(
-                    CategoryEntity
-                        .builder()
-                        .id(UUID.randomUUID())
-                        .user(user)
-                        .name(name)
-                        .normalizedName(name.toLowerCase(Locale.ROOT))
-                        .type(TransactionType.RECEITA)
-                        .createdAt(now)
-                        .build()
-                )
-            );
-        }
-
-        categories
-            .stream()
-            .filter(c -> c.getType() == TransactionType.DESPESA)
-            .forEach(c ->
-                budgetRepository.save(
-                    BudgetEntity.builder().id(UUID.randomUUID()).user(user).month(month).category(c).limitCents(0).createdAt(now).build()
-                )
-            );
-
-        CategoryEntity receita = categories.stream().filter(c -> c.getType() == TransactionType.RECEITA).findFirst().orElseThrow();
-        CategoryEntity despesa = categories.stream().filter(c -> c.getType() == TransactionType.DESPESA).findFirst().orElseThrow();
-        transactionRepository.save(
-            TransactionEntity
-                .builder()
-                .id(UUID.randomUUID())
-                .user(user)
-                .type(TransactionType.RECEITA)
-                .category(receita)
-                .description("Seed receita")
-                .amountCents(500_000)
-                .occurredOn(YearMonth.now(clock).atDay(5))
-                .createdAt(now)
-                .build()
-        );
-        transactionRepository.save(
-            TransactionEntity
-                .builder()
-                .id(UUID.randomUUID())
-                .user(user)
-                .type(TransactionType.DESPESA)
-                .category(despesa)
-                .description("Seed despesa")
-                .amountCents(120_000)
-                .occurredOn(YearMonth.now(clock).atDay(7))
-                .createdAt(now)
-                .build()
-        );
-
-        return load(userId);
+        budgetRepository.deleteAll(budgetRepository.findByEnvironmentIdOrderByMonthDesc(environment.getId()));
+        categoryRepository.deleteAll(categoryRepository.findByEnvironmentIdOrderByNameAsc(environment.getId()));
+        seedService.ensureDefaultCategories(environment, user);
+        return load(userId, environment.getId());
     }
 
     private UserAccount requiredUser(UUID userId) {
@@ -339,6 +371,14 @@ public class FinanceService {
         } catch (DateTimeParseException ex) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid occurredOn format. Use YYYY-MM-DD");
         }
+    }
+
+    private LocalDate parseTransactionDate(String dateRaw) {
+        LocalDate date = parseDate(dateRaw);
+        if (date.isBefore(LocalDate.of(2000, 1, 1)) || date.isAfter(LocalDate.of(2200, 12, 31))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Transaction date must be between 2000-01-01 and 2200-12-31");
+        }
+        return date;
     }
 
     private String normalizeDescription(String description) {
@@ -372,11 +412,17 @@ public class FinanceService {
             entity.getDescription(),
             entity.getAmountCents(),
             entity.getOccurredOn(),
-            entity.getCreatedAt()
+            entity.getCreatedAt(),
+            toUserSummary(entity.getCreatedByUser() != null ? entity.getCreatedByUser() : entity.getUser())
         );
     }
 
     private BudgetDto toBudgetDto(BudgetEntity entity) {
         return new BudgetDto(entity.getId(), entity.getMonth(), entity.getCategory().getId(), entity.getLimitCents(), entity.getCreatedAt());
+    }
+
+    private UserSummaryDto toUserSummary(UserAccount user) {
+        if (user == null) return null;
+        return new UserSummaryDto(user.getId(), user.getName(), user.getEmail());
     }
 }

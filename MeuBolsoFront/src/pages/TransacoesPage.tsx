@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { formatBRLFromCents, monthLabelFromYYYYMM, parseAmountToCents } from '../domain/finance'
+import {
+  formatBRLFromCents,
+  formatCurrencyInput,
+  formatCurrencyInputFromCents,
+  isValidISODate,
+  MAX_AMOUNT_CENTS,
+  monthLabelFromYYYYMM,
+  parseAmountToCents,
+} from '../domain/finance'
 import type { TransactionType } from '../domain/finance'
 import { useFinance } from '../services/useFinance'
+import { useEnvironment } from '../services/useEnvironment'
 import Button from '../components/ui/Button'
+import ActionIconButton from '../components/ui/ActionIconButton'
 import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
@@ -11,6 +21,7 @@ import PillTabs from '../components/ui/PillTabs'
 import PageLoader from '../components/PageLoader'
 
 const FILTER_TABS = [{ value: 'TODOS' as const, label: 'Todos' }]
+const TRANSACTION_DESCRIPTION_MAX_LENGTH = 240
 
 function todayISO() {
   const d = new Date()
@@ -24,8 +35,11 @@ export default function TransacoesPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   }, [])
 
-  const { loading, data, addTransaction } = useFinance()
+  const { loading, data, addTransaction, updateTransaction, deleteTransaction } = useFinance()
+  const { canEdit } = useEnvironment()
   const [open, setOpen] = useState(false)
+  const [detailsId, setDetailsId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState<(typeof FILTER_TABS)[number]['value']>('TODOS')
 
   const [type, setType] = useState<TransactionType>('DESPESA')
@@ -63,23 +77,55 @@ export default function TransacoesPage() {
     setAmount('')
     setOccurredOn(todayISO())
     setError(null)
+    setEditingId(null)
+  }
+
+  const openForCreate = () => {
+    resetForm()
+    setOpen(true)
+  }
+
+  const openForEdit = (tx: NonNullable<typeof data>['transactions'][number]) => {
+    setEditingId(tx.id)
+    setType(tx.type)
+    setCategoryId(tx.categoryId)
+    setDescription(tx.description ?? '')
+    setAmount(formatCurrencyInputFromCents(tx.amountCents))
+    setOccurredOn(tx.occurredOn)
+    setError(null)
+    setDetailsId(null)
+    setOpen(true)
   }
 
   const submit = async () => {
     setError(null)
     try {
       const cents = parseAmountToCents(amount)
-      if (cents === null) throw new Error('Valor inválido')
+      if (!cents) throw new Error('Valor inválido')
+      if (cents > MAX_AMOUNT_CENTS) throw new Error('Valor excede o limite permitido')
       if (!categoryId) throw new Error('Selecione uma categoria')
       if (!occurredOn) throw new Error('Data inválida')
+      if (!isValidISODate(occurredOn)) throw new Error('Data inválida')
+      if (occurredOn < '2000-01-01' || occurredOn > '2200-12-31') {
+        throw new Error('Data deve estar entre 2000-01-01 e 2200-12-31')
+      }
+      if (description.trim().length > TRANSACTION_DESCRIPTION_MAX_LENGTH) {
+        throw new Error('Descrição deve ter no máximo 240 caracteres')
+      }
 
-      await addTransaction({
+      const payload = {
         type,
         categoryId,
         description: description.trim() || undefined,
         amountCents: cents,
         occurredOn,
-      })
+      }
+
+      if (editingId) {
+        await updateTransaction(editingId, payload)
+      } else {
+        await addTransaction(payload)
+      }
 
       setOpen(false)
       resetForm()
@@ -109,9 +155,9 @@ export default function TransacoesPage() {
         <Button
           variant="primary"
           onClick={() => {
-            setOpen(true)
-            setError(null)
+            openForCreate()
           }}
+          disabled={!canEdit}
         >
           Nova Transação
         </Button>
@@ -129,7 +175,7 @@ export default function TransacoesPage() {
               const categoryName = cat?.name ?? 'Categoria'
               const labelPrefix = cat?.emoji ? `${cat.emoji} ` : ''
               return (
-                <div className="row" key={tx.id}>
+                <div className="row rowClickable" key={tx.id} onClick={() => setDetailsId(tx.id)} role="button" tabIndex={0}>
                   <div className="rowLabel">
                     <div className="rowName">
                       {tx.type === 'DESPESA' ? 'Despesa: ' : 'Receita: '}
@@ -138,9 +184,17 @@ export default function TransacoesPage() {
                     </div>
                     <div className="rowHint">{tx.description ? tx.description : `Em ${tx.occurredOn}`}</div>
                   </div>
-                  <div style={{ fontWeight: 750, color: 'var(--text-h)' }}>
-                    {tx.type === 'DESPESA' ? '-' : ''}
-                    {formatBRLFromCents(tx.amountCents)}
+                  <div className="rowActions" onClick={(e) => e.stopPropagation()}>
+                    <div className={tx.type === 'DESPESA' ? 'txAmountOut' : 'txAmountIn'}>
+                      {tx.type === 'DESPESA' ? '-' : '+'}
+                      {formatBRLFromCents(tx.amountCents)}
+                    </div>
+                    {canEdit ? (
+                      <>
+                        <ActionIconButton action="edit" onClick={() => openForEdit(tx)} aria-label="Editar transação" />
+                        <ActionIconButton action="delete" onClick={() => void deleteTransaction(tx.id)} aria-label="Excluir transação" />
+                      </>
+                    ) : null}
                   </div>
                 </div>
               )
@@ -150,7 +204,7 @@ export default function TransacoesPage() {
 
       {open ? (
         <Modal
-          title="Nova Transação"
+          title={editingId ? 'Editar Transação' : 'Nova Transação'}
           onClose={() => {
             setOpen(false)
             resetForm()
@@ -192,12 +246,13 @@ export default function TransacoesPage() {
                 inputMode="decimal"
                 placeholder="0,00"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(formatCurrencyInput(e.target.value))}
+                required
               />
             </div>
             <div className="field">
               <div className="label">Data</div>
-              <Input type="date" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} />
+              <Input type="date" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} required />
             </div>
           </div>
 
@@ -205,7 +260,12 @@ export default function TransacoesPage() {
 
           <div className="field">
             <div className="label">Descrição (opcional)</div>
-            <Input placeholder="Ex: aluguel, salário..." value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input
+              placeholder="Ex: aluguel, salário..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={TRANSACTION_DESCRIPTION_MAX_LENGTH}
+            />
           </div>
 
           {error ? (
@@ -229,6 +289,64 @@ export default function TransacoesPage() {
               Salvar
             </button>
           </div>
+        </Modal>
+      ) : null}
+
+      {detailsId && data ? (
+        <Modal title="Detalhes da Transação" onClose={() => setDetailsId(null)}>
+          {(() => {
+            const tx = data.transactions.find((item) => item.id === detailsId)
+            if (!tx) return <EmptyState>Transação não encontrada.</EmptyState>
+            const cat = data.categories.find((c) => c.id === tx.categoryId)
+            return (
+              <div className="detailsGrid">
+                <div>
+                  <span className="detailsLabel">Tipo</span>
+                  <strong>{tx.type === 'RECEITA' ? 'Receita' : 'Despesa'}</strong>
+                </div>
+                <div>
+                  <span className="detailsLabel">Valor</span>
+                  <strong className={tx.type === 'RECEITA' ? 'txAmountIn' : 'txAmountOut'}>
+                    {tx.type === 'DESPESA' ? '-' : '+'}
+                    {formatBRLFromCents(tx.amountCents)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="detailsLabel">Categoria</span>
+                  <strong>{cat?.name ?? 'Categoria'}</strong>
+                </div>
+                <div>
+                  <span className="detailsLabel">Data da transação</span>
+                  <strong>{tx.occurredOn}</strong>
+                </div>
+                <div>
+                  <span className="detailsLabel">Criada em</span>
+                  <strong>{new Date(tx.createdAt).toLocaleString('pt-BR')}</strong>
+                </div>
+                <div>
+                  <span className="detailsLabel">Registrada por</span>
+                  <strong>{tx.createdBy?.name ?? 'Usuário'}</strong>
+                </div>
+                <div className="detailsSpan">
+                  <span className="detailsLabel">Descrição</span>
+                  <strong>{tx.description || 'Sem descrição'}</strong>
+                </div>
+                {canEdit ? (
+                  <div className="detailsActions detailsSpan">
+                    <ActionIconButton action="edit" onClick={() => openForEdit(tx)} aria-label="Editar transação" />
+                    <ActionIconButton
+                      action="delete"
+                      onClick={() => {
+                        void deleteTransaction(tx.id)
+                        setDetailsId(null)
+                      }}
+                      aria-label="Excluir transação"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )
+          })()}
         </Modal>
       ) : null}
     </>

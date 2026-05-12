@@ -5,10 +5,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:2030'
 
 export class ApiError extends Error {
   public readonly status: number
+  public readonly fields: Record<string, string>
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, fields: Record<string, string> = {}) {
     super(message)
     this.status = status
+    this.fields = fields
   }
 }
 
@@ -81,13 +83,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!response.ok) {
     let message = 'Erro inesperado'
+    let fields: Record<string, string> = {}
     try {
-      const payload = (await response.json()) as { message?: string }
+      const payload = (await response.json()) as { message?: string; fields?: Record<string, string> }
       message = payload.message ?? message
+      fields = payload.fields ?? fields
     } catch {
       // no-op
     }
-    throw new ApiError(response.status, message)
+    throw new ApiError(response.status, message, fields)
   }
 
   if (response.status === 204) {

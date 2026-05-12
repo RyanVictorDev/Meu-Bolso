@@ -1,5 +1,6 @@
 package com.meubolso.v1.finance;
 
+import com.meubolso.v1.environment.EnvironmentEntity;
 import com.meubolso.v1.user.UserAccount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -30,6 +31,10 @@ public class BudgetEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private UserAccount user;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "environment_id", nullable = false)
+    private EnvironmentEntity environment;
 
     @Column(name = "month_ref", nullable = false, length = 7)
     private String month;

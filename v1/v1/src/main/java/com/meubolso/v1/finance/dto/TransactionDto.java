@@ -12,5 +12,6 @@ public record TransactionDto(
     String description,
     long amountCents,
     LocalDate occurredOn,
-    Instant createdAt
+    Instant createdAt,
+    UserSummaryDto createdBy
 ) {}

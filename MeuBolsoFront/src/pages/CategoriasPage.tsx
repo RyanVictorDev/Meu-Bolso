@@ -10,6 +10,8 @@ import EmojiPickerField from '../components/ui/EmojiPickerField'
 import CategoryIcon from '../components/icons/CategoryIcon'
 import PageLoader from '../components/PageLoader'
 
+const CATEGORY_NAME_MAX_LENGTH = 80
+
 export default function CategoriasPage() {
   const { loading, data, addCategory } = useFinance()
   const [open, setOpen] = useState(false)
@@ -33,6 +35,7 @@ export default function CategoriasPage() {
     try {
       const trimmed = name.trim()
       if (trimmed.length < 2) throw new Error('Nome da categoria inválido')
+      if (trimmed.length > CATEGORY_NAME_MAX_LENGTH) throw new Error('Nome da categoria deve ter no máximo 80 caracteres')
       await addCategory({ name: trimmed, type, emoji: emoji ?? undefined })
       setOpen(false)
       setName('')
@@ -165,7 +168,14 @@ export default function CategoriasPage() {
             </div>
             <div className="field">
               <div className="label">Nome</div>
-              <Input placeholder="Ex: Educação" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                placeholder="Ex: Educação"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                minLength={2}
+                maxLength={CATEGORY_NAME_MAX_LENGTH}
+              />
             </div>
             <div className="field" style={{ gridColumn: '1 / -1' }}>
               <div className="label">Ícone (emoji)</div>

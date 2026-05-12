@@ -18,6 +18,12 @@ function formatBRDate(dateISO: string) {
   return `${d}/${m}/${y}`
 }
 
+function previousMonthOf(month: string) {
+  const [year, monthNumber] = month.split('-').map(Number)
+  const date = new Date(year, monthNumber - 2, 1)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 function StatIcon({ variant }: { variant: 'in' | 'out' | 'edit' }) {
   if (variant === 'in') {
     return (
@@ -65,6 +71,15 @@ export default function DashboardPage() {
   const receitasCents = useMemo(() => sumByType(monthTransactions, 'RECEITA'), [monthTransactions])
   const despesasCents = useMemo(() => sumByType(monthTransactions, 'DESPESA'), [monthTransactions])
   const saldoCents = receitasCents - despesasCents
+  const previousMonthExpensesCents = useMemo(() => {
+    if (!data) return 0
+    const previousMonth = previousMonthOf(activeMonth)
+    return sumByType(
+      data.transactions.filter((t) => t.occurredOn.startsWith(previousMonth)),
+      'DESPESA',
+    )
+  }, [activeMonth, data])
+  const expensesDeltaCents = despesasCents - previousMonthExpensesCents
 
   const budgetsTotalCents = useMemo(() => {
     if (!data) return 0
@@ -105,6 +120,23 @@ export default function DashboardPage() {
       .slice(0, 5)
   }, [monthTransactions])
 
+  const goalSummary = useMemo(() => {
+    const activeGoals = data?.goals.filter((goal) => !goal.archived) ?? []
+    const targetCents = activeGoals.reduce((acc, goal) => acc + goal.targetCents, 0)
+    const currentCents = activeGoals.reduce((acc, goal) => acc + goal.currentCents, 0)
+    const averageProgress =
+      activeGoals.length === 0
+        ? 0
+        : Math.round(
+            activeGoals.reduce((acc, goal) => acc + Math.min(100, (goal.currentCents / goal.targetCents) * 100), 0) /
+              activeGoals.length,
+          )
+    const closestGoal = activeGoals
+      .slice()
+      .sort((a, b) => b.currentCents / b.targetCents - a.currentCents / a.targetCents)[0]
+    return { activeGoals, targetCents, currentCents, averageProgress, closestGoal }
+  }, [data])
+
   if (loading || !data) {
     return <DashboardSkeleton />
   }
@@ -128,12 +160,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid3">
+      <div className="grid4">
         <div className="card statCard">
           <div className="statTop">
             <div>
               <p className="statLabel">Receitas</p>
-              <div className="statValue">{formatBRLFromCents(receitasCents)}</div>
+              <div className="statValue statValueIncome">{formatBRLFromCents(receitasCents)}</div>
             </div>
             <div className="statIconBadge statIconBadgeGreen" aria-hidden="true">
               <StatIcon variant="in" />
@@ -145,7 +177,7 @@ export default function DashboardPage() {
           <div className="statTop">
             <div>
               <p className="statLabel">Despesas</p>
-              <div className="statValue">{formatBRLFromCents(despesasCents)}</div>
+              <div className="statValue statValueExpense">{formatBRLFromCents(despesasCents)}</div>
             </div>
             <div className="statIconBadge statIconBadgeRed" aria-hidden="true">
               <StatIcon variant="out" />
@@ -163,6 +195,41 @@ export default function DashboardPage() {
             <div className="statIconBadge statIconBadgePurple" aria-hidden="true">
               <StatIcon variant="edit" />
             </div>
+          </div>
+        </div>
+
+        <div className="card statCard">
+          <div className="statTop">
+            <div>
+              <p className="statLabel">Despesas vs mês passado</p>
+              <div className={expensesDeltaCents <= 0 ? 'statValue statValueIncome' : 'statValue statValueExpense'}>
+                {expensesDeltaCents === 0 ? formatBRLFromCents(0) : `${expensesDeltaCents > 0 ? '+' : '-'}${formatBRLFromCents(Math.abs(expensesDeltaCents))}`}
+              </div>
+              <div className="statHint">Mês passado: {formatBRLFromCents(previousMonthExpensesCents)}</div>
+            </div>
+            <div className="statIconBadge statIconBadgeRed" aria-hidden="true">
+              <StatIcon variant="out" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid3" style={{ marginTop: 14 }}>
+        <div className="card statCard">
+          <p className="statLabel">Metas ativas</p>
+          <div className="statValue">{goalSummary.activeGoals.length}</div>
+          <div className="statHint">Objetivos em andamento</div>
+        </div>
+        <div className="card statCard">
+          <p className="statLabel">Total aportado</p>
+          <div className="statValue statValueIncome">{formatBRLFromCents(goalSummary.currentCents)}</div>
+          <div className="statHint">Meta total: {formatBRLFromCents(goalSummary.targetCents)}</div>
+        </div>
+        <div className="card statCard">
+          <p className="statLabel">Progresso médio</p>
+          <div className="statValue">{goalSummary.averageProgress}%</div>
+          <div className="statHint">
+            {goalSummary.closestGoal ? `Mais próxima: ${goalSummary.closestGoal.name}` : 'Nenhuma meta cadastrada'}
           </div>
         </div>
       </div>

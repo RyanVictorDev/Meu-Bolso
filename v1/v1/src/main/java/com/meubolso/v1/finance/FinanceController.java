@@ -9,10 +9,14 @@ import com.meubolso.v1.finance.dto.DashboardResponse;
 import com.meubolso.v1.finance.dto.FinanceDataResponse;
 import com.meubolso.v1.finance.dto.SetBudgetLimitRequest;
 import com.meubolso.v1.finance.dto.TransactionDto;
+import com.meubolso.v1.finance.dto.UpdateTransactionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,42 +34,90 @@ public class FinanceController {
     }
 
     @GetMapping("/finance")
-    public FinanceDataResponse load(@AuthenticationPrincipal AuthenticatedUser user) {
-        return financeService.load(user.id());
+    public FinanceDataResponse load(@AuthenticationPrincipal AuthenticatedUser user, @RequestParam(required = false) UUID environmentId) {
+        return financeService.load(user.id(), environmentId);
     }
 
     @PostMapping("/finance/reset")
-    public FinanceDataResponse reset(@AuthenticationPrincipal AuthenticatedUser user) {
-        return financeService.resetToSeed(user.id());
+    public FinanceDataResponse reset(@AuthenticationPrincipal AuthenticatedUser user, @RequestParam(required = false) UUID environmentId) {
+        return financeService.resetToSeed(user.id(), environmentId);
     }
 
     @GetMapping("/categories")
-    public List<CategoryDto> categories(@AuthenticationPrincipal AuthenticatedUser user) {
-        return financeService.load(user.id()).categories();
+    public List<CategoryDto> categories(@AuthenticationPrincipal AuthenticatedUser user, @RequestParam(required = false) UUID environmentId) {
+        return financeService.load(user.id(), environmentId).categories();
     }
 
     @PostMapping("/categories")
-    public CategoryDto addCategory(@AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody AddCategoryRequest request) {
-        return financeService.addCategory(user.id(), request);
+    public CategoryDto addCategory(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @Valid @RequestBody AddCategoryRequest request
+    ) {
+        return financeService.addCategory(user.id(), environmentId, request);
     }
 
     @GetMapping("/transactions")
-    public List<TransactionDto> transactions(@AuthenticationPrincipal AuthenticatedUser user, @RequestParam(required = false) String month) {
-        return financeService.getTransactions(user.id(), month);
+    public List<TransactionDto> transactions(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @RequestParam(required = false) String month
+    ) {
+        return financeService.getTransactions(user.id(), environmentId, month);
     }
 
     @PostMapping("/transactions")
-    public TransactionDto addTransaction(@AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody AddTransactionRequest request) {
-        return financeService.addTransaction(user.id(), request);
+    public TransactionDto addTransaction(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @Valid @RequestBody AddTransactionRequest request
+    ) {
+        return financeService.addTransaction(user.id(), environmentId, request);
+    }
+
+    @GetMapping("/transactions/{transactionId}")
+    public TransactionDto transaction(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @PathVariable UUID transactionId
+    ) {
+        return financeService.getTransaction(user.id(), environmentId, transactionId);
+    }
+
+    @PutMapping("/transactions/{transactionId}")
+    public TransactionDto updateTransaction(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @PathVariable UUID transactionId,
+        @Valid @RequestBody UpdateTransactionRequest request
+    ) {
+        return financeService.updateTransaction(user.id(), environmentId, transactionId, request);
+    }
+
+    @DeleteMapping("/transactions/{transactionId}")
+    public void deleteTransaction(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @PathVariable UUID transactionId
+    ) {
+        financeService.deleteTransaction(user.id(), environmentId, transactionId);
     }
 
     @PutMapping("/budgets/limit")
-    public BudgetDto setBudgetLimit(@AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody SetBudgetLimitRequest request) {
-        return financeService.setBudgetLimit(user.id(), request);
+    public BudgetDto setBudgetLimit(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @Valid @RequestBody SetBudgetLimitRequest request
+    ) {
+        return financeService.setBudgetLimit(user.id(), environmentId, request);
     }
 
     @GetMapping("/dashboard")
-    public DashboardResponse dashboard(@AuthenticationPrincipal AuthenticatedUser user, @RequestParam String month) {
-        return financeService.dashboard(user.id(), month);
+    public DashboardResponse dashboard(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) UUID environmentId,
+        @RequestParam String month
+    ) {
+        return financeService.dashboard(user.id(), environmentId, month);
     }
 }

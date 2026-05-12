@@ -5,7 +5,7 @@ export default function PillTabs<T extends string>({
   value,
   onChange,
 }: {
-  items: Array<{ value: T; label: ReactNode }>
+  items: ReadonlyArray<{ value: T; label: ReactNode }>
   value: T
   onChange: (next: T) => void
 }) {

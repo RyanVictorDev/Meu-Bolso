@@ -6,6 +6,7 @@ import com.meubolso.v1.auth.dto.RefreshRequest;
 import com.meubolso.v1.auth.dto.RegisterRequest;
 import com.meubolso.v1.common.ApiException;
 import com.meubolso.v1.config.SecurityProperties;
+import com.meubolso.v1.environment.EnvironmentService;
 import com.meubolso.v1.user.UserAccount;
 import com.meubolso.v1.user.UserAccountRepository;
 import java.time.Clock;
@@ -26,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final TokenHashService tokenHashService;
     private final SecurityProperties securityProperties;
+    private final EnvironmentService environmentService;
     private final Clock clock;
 
     public AuthService(
@@ -35,6 +37,7 @@ public class AuthService {
         JwtService jwtService,
         TokenHashService tokenHashService,
         SecurityProperties securityProperties,
+        EnvironmentService environmentService,
         Clock clock
     ) {
         this.userAccountRepository = userAccountRepository;
@@ -43,6 +46,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.tokenHashService = tokenHashService;
         this.securityProperties = securityProperties;
+        this.environmentService = environmentService;
         this.clock = clock;
     }
 
@@ -63,6 +67,7 @@ public class AuthService {
                 .createdAt(clock.instant())
                 .build()
         );
+        environmentService.createDefaultForUser(user);
         return issueTokens(user);
     }
 

@@ -1,5 +1,6 @@
 package com.meubolso.v1.finance;
 
+import com.meubolso.v1.environment.EnvironmentEntity;
 import com.meubolso.v1.user.UserAccount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,6 +34,14 @@ public class TransactionEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private UserAccount user;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "environment_id", nullable = false)
+    private EnvironmentEntity environment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private UserAccount createdByUser;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)

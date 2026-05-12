@@ -9,6 +9,8 @@ public record DashboardResponse(
     long saldoCents,
     long budgetTotalCents,
     boolean withinBudget,
+    long previousMonthDespesasCents,
+    long despesasDeltaCents,
     List<CategoryExpenseItem> expensesByCategory
 ) {
     public record CategoryExpenseItem(String categoryName, long amountCents) {}

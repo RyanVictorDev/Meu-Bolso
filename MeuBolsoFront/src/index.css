@@ -6,6 +6,9 @@
   --accent-border: color-mix(in srgb, var(--accent) 42%, transparent);
   --accent-ring: color-mix(in srgb, var(--accent) 28%, transparent);
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-contrast: #ffffff;
+  --danger-bg: color-mix(in srgb, var(--expense) 10%, transparent);
+  --danger-border: color-mix(in srgb, var(--expense) 35%, transparent);
 
   --income: var(--accent);
 
