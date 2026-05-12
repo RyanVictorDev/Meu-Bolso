@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -53,12 +54,16 @@ export default function DateInput({
   const initialMonth = parseISO(value) ?? parseISO(min ?? '') ?? new Date()
   const [open, setOpen] = useState(false)
   const [viewMonth, setViewMonth] = useState(() => new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1))
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 320 })
   const wrapRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     const onDocClick = (event: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (wrapRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      setOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
@@ -68,6 +73,30 @@ export default function DateInput({
     return () => {
       document.removeEventListener('mousedown', onDocClick)
       document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const updatePosition = () => {
+      const rect = wrapRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const menuWidth = Math.min(320, window.innerWidth - 32)
+      const left = Math.min(Math.max(16, rect.left), window.innerWidth - menuWidth - 16)
+      const preferredTop = rect.bottom + 6
+      const estimatedHeight = 390
+      const top =
+        preferredTop + estimatedHeight > window.innerHeight
+          ? Math.max(16, rect.top - estimatedHeight - 6)
+          : Math.min(preferredTop, window.innerHeight - estimatedHeight - 16)
+      setMenuPosition({ top, left, width: menuWidth })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
     }
   }, [open])
 
@@ -136,8 +165,15 @@ export default function DateInput({
         </span>
       </button>
 
-      {open ? (
-        <div className="dateMenu" role="dialog" aria-label="Selecionar data">
+      {open
+        ? createPortal(
+            <div
+              className="dateMenu"
+              role="dialog"
+              aria-label="Selecionar data"
+              ref={menuRef}
+              style={{ top: menuPosition.top, left: menuPosition.left, width: menuPosition.width }}
+            >
           <div className="dateMenuHeader">
             <button type="button" className="dateNavBtn" onClick={() => moveMonth(-1)} aria-label="Mês anterior">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -191,8 +227,10 @@ export default function DateInput({
               Hoje
             </button>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

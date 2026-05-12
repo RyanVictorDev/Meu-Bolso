@@ -2166,11 +2166,8 @@
 }
 
 .dateMenu {
-  position: absolute;
-  z-index: 100;
-  top: calc(100% + 6px);
-  left: 0;
-  width: min(320px, calc(100vw - 48px));
+  position: fixed;
+  z-index: 260;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 16px;
