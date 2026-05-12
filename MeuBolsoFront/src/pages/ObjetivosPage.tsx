@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   formatBRLFromCents,
+  formatBRDate,
   formatCurrencyInput,
   formatCurrencyInputFromCents,
   isValidISODate,
@@ -176,7 +177,7 @@ export default function ObjetivosPage() {
                   <strong>{formatBRLFromCents(goal.currentCents)}</strong>
                   <span>de {formatBRLFromCents(goal.targetCents)}</span>
                 </div>
-                {goal.dueOn ? <div className="rowHint">Prazo: {goal.dueOn}</div> : null}
+                {goal.dueOn ? <div className="rowHint">Prazo: {formatBRDate(goal.dueOn)}</div> : null}
                 <div className="goalActions">
                   <Button variant="secondary" onClick={() => setContributionGoal(goal)} disabled={!canEdit}>
                     Adicionar aporte
@@ -192,7 +193,7 @@ export default function ObjetivosPage() {
                   <div className="goalContributionList">
                     {goal.contributions.slice(0, 3).map((contribution) => (
                       <div className="goalContributionRow" key={contribution.id}>
-                        <span>{contribution.contributedOn}</span>
+                        <span>{formatBRDate(contribution.contributedOn)}</span>
                         <strong>{formatBRLFromCents(contribution.amountCents)}</strong>
                       </div>
                     ))}

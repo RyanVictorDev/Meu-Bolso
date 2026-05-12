@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   formatBRLFromCents,
+  formatBRDate,
   formatCurrencyInput,
   formatCurrencyInputFromCents,
   isValidISODate,
   MAX_AMOUNT_CENTS,
-  monthLabelFromYYYYMM,
   parseAmountToCents,
 } from '../domain/finance'
 import type { TransactionType } from '../domain/finance'
@@ -18,10 +18,8 @@ import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import Select from '../components/ui/Select'
-import PillTabs from '../components/ui/PillTabs'
 import PageLoader from '../components/PageLoader'
 
-const FILTER_TABS = [{ value: 'TODOS' as const, label: 'Todos' }]
 const TRANSACTION_DESCRIPTION_MAX_LENGTH = 240
 
 function todayISO() {
@@ -35,13 +33,15 @@ export default function TransacoesPage() {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   }, [])
+  const currentMonthStart = useMemo(() => `${currentMonth}-01`, [currentMonth])
 
   const { loading, data, addTransaction, updateTransaction, deleteTransaction } = useFinance()
   const { canEdit } = useEnvironment()
   const [open, setOpen] = useState(false)
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [filter, setFilter] = useState<(typeof FILTER_TABS)[number]['value']>('TODOS')
+  const [dateFrom, setDateFrom] = useState(currentMonthStart)
+  const [dateTo, setDateTo] = useState(todayISO())
 
   const [type, setType] = useState<TransactionType>('DESPESA')
   const [categoryId, setCategoryId] = useState<string>('')
@@ -57,10 +57,12 @@ export default function TransacoesPage() {
 
   const transactions = useMemo(() => {
     if (!data) return []
-    const inMonth = data.transactions.filter((t) => t.occurredOn.startsWith(currentMonth))
-    if (filter === 'TODOS') return inMonth
-    return inMonth
-  }, [currentMonth, data, filter])
+    return data.transactions.filter((tx) => {
+      if (dateFrom && tx.occurredOn < dateFrom) return false
+      if (dateTo && tx.occurredOn > dateTo) return false
+      return true
+    })
+  }, [data, dateFrom, dateTo])
 
   useEffect(() => {
     if (!open) return
@@ -69,7 +71,23 @@ export default function TransacoesPage() {
     setCategoryId(categoriesForType[0].id)
   }, [open, categoryId, categoriesForType])
 
-  const monthLabel = useMemo(() => monthLabelFromYYYYMM(currentMonth), [currentMonth])
+  const periodError = dateFrom && dateTo && dateFrom > dateTo ? 'A data inicial não pode ser maior que a final.' : null
+  const periodLabel = useMemo(() => {
+    if (dateFrom && dateTo) return `${formatBRDate(dateFrom)} até ${formatBRDate(dateTo)}`
+    if (dateFrom) return `A partir de ${formatBRDate(dateFrom)}`
+    if (dateTo) return `Até ${formatBRDate(dateTo)}`
+    return 'Todos os períodos'
+  }, [dateFrom, dateTo])
+
+  const resetToCurrentMonth = () => {
+    setDateFrom(currentMonthStart)
+    setDateTo(todayISO())
+  }
+
+  const clearPeriod = () => {
+    setDateFrom('')
+    setDateTo('')
+  }
 
   const resetForm = () => {
     setType('DESPESA')
@@ -149,10 +167,9 @@ export default function TransacoesPage() {
   return (
     <>
       <h1 className="pageTitle">Gerencie suas receitas e despesas</h1>
-      <div className="pageSubtitle">{monthLabel}</div>
+      <div className="pageSubtitle">Período: {periodLabel}</div>
 
       <div className="toolbar">
-        <PillTabs items={FILTER_TABS} value={filter} onChange={setFilter} />
         <Button
           variant="primary"
           onClick={() => {
@@ -164,7 +181,37 @@ export default function TransacoesPage() {
         </Button>
       </div>
 
-      {transactions.length === 0 ? (
+      <div className="dateFilterCard">
+        <div className="dateFilterHeader">
+          <div>
+            <div className="dateFilterTitle">Filtrar por data</div>
+            <div className="dateFilterSubtitle">{transactions.length} transação{transactions.length === 1 ? '' : 'ões'} no período</div>
+          </div>
+          <div className="dateFilterActions">
+            <button type="button" className="smallBtn" onClick={resetToCurrentMonth}>
+              Mês atual
+            </button>
+            <button type="button" className="smallBtn" onClick={clearPeriod}>
+              Limpar
+            </button>
+          </div>
+        </div>
+        <div className="dateFilterFields">
+          <div className="field">
+            <div className="label">De</div>
+            <DateInput value={dateFrom} onChange={setDateFrom} max={dateTo || undefined} />
+          </div>
+          <div className="field">
+            <div className="label">Até</div>
+            <DateInput value={dateTo} onChange={setDateTo} min={dateFrom || undefined} />
+          </div>
+        </div>
+        {periodError ? <div className="fieldError">{periodError}</div> : null}
+      </div>
+
+      {periodError ? (
+        <EmptyState>{periodError}</EmptyState>
+      ) : transactions.length === 0 ? (
         <EmptyState>Nenhuma transação registrada. Clique em &quot;Nova Transação&quot; para começar.</EmptyState>
       ) : (
         <div className="list">
@@ -183,7 +230,7 @@ export default function TransacoesPage() {
                       {labelPrefix}
                       {categoryName}
                     </div>
-                    <div className="rowHint">{tx.description ? tx.description : `Em ${tx.occurredOn}`}</div>
+                    <div className="rowHint">{tx.description ? tx.description : `Em ${formatBRDate(tx.occurredOn)}`}</div>
                   </div>
                   <div className="rowActions" onClick={(e) => e.stopPropagation()}>
                     <div className={tx.type === 'DESPESA' ? 'txAmountOut' : 'txAmountIn'}>
@@ -318,7 +365,7 @@ export default function TransacoesPage() {
                 </div>
                 <div>
                   <span className="detailsLabel">Data da transação</span>
-                  <strong>{tx.occurredOn}</strong>
+                  <strong>{formatBRDate(tx.occurredOn)}</strong>
                 </div>
                 <div>
                   <span className="detailsLabel">Criada em</span>

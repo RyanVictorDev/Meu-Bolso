@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { formatBRLFromCents, monthLabelFromYYYYMM as monthLabelFromYYYYMMUtil } from '../domain/finance'
+import { formatBRDate, formatBRLFromCents, monthLabelFromYYYYMM as monthLabelFromYYYYMMUtil } from '../domain/finance'
 import { useFinance } from '../services/useFinance'
 import ReceitasDespesasChart from '../components/charts/ReceitasDespesasChart'
 import DespesasPorCategoriaDonutChart from '../components/charts/DespesasPorCategoriaDonutChart'
@@ -10,12 +10,6 @@ type TxType = 'RECEITA' | 'DESPESA'
 
 function sumByType(transactions: Array<{ type: TxType; amountCents: number }>, type: TxType) {
   return transactions.filter((t) => t.type === type).reduce((acc, t) => acc + t.amountCents, 0)
-}
-
-function formatBRDate(dateISO: string) {
-  const [y, m, d] = dateISO.split('-')
-  if (!y || !m || !d) return dateISO
-  return `${d}/${m}/${y}`
 }
 
 function previousMonthOf(month: string) {

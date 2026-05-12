@@ -112,6 +112,12 @@ export function isValidYearMonth(value: string): boolean {
   return year >= 1 && month >= 1 && month <= 12
 }
 
+export function formatBRDate(value: string): string {
+  if (!isValidISODate(value)) return value
+  const [year, month, day] = value.split('-')
+  return `${day}/${month}/${year}`
+}
+
 export function monthLabelFromYYYYMM(month: string): string {
   const [yearStr, monthStr] = month.split('-')
   const year = Number(yearStr)
