@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import DespesasPorCategoriaDonutChart from '../components/charts/DespesasPorCategoriaDonutChart'
 import ReceitasDespesasChart from '../components/charts/ReceitasDespesasChart'
 import PageLoader from '../components/PageLoader'
@@ -25,41 +25,50 @@ function currentMonthStartISO() {
 }
 
 export default function GraficosPage() {
-  const { loading, data } = useFinance()
+  const { loading, data, getTransactionSummary } = useFinance()
   const [tab, setTab] = useState<(typeof TABS)[number]['value']>('resumo')
   const [dateFrom, setDateFrom] = useState(currentMonthStartISO)
   const [dateTo, setDateTo] = useState(todayISO)
-
-  const filteredTransactions = useMemo(() => {
-    const txs = data?.transactions ?? []
-    return txs.filter((tx) => {
-      if (dateFrom && tx.occurredOn < dateFrom) return false
-      if (dateTo && tx.occurredOn > dateTo) return false
-      return true
-    })
-  }, [data, dateFrom, dateTo])
-
-  const totals = useMemo(() => {
-    return {
-      receitas: filteredTransactions.filter((tx) => tx.type === 'RECEITA').reduce((acc, tx) => acc + tx.amountCents, 0),
-      despesas: filteredTransactions.filter((tx) => tx.type === 'DESPESA').reduce((acc, tx) => acc + tx.amountCents, 0),
-    }
-  }, [filteredTransactions])
-
-  const expensesByCategory = useMemo(() => {
-    if (!data) return []
-    const totalsByCategory = new Map<string, number>()
-    filteredTransactions
-      .filter((tx) => tx.type === 'DESPESA')
-      .forEach((tx) => totalsByCategory.set(tx.categoryId, (totalsByCategory.get(tx.categoryId) ?? 0) + tx.amountCents))
-    return Array.from(totalsByCategory.entries()).map(([categoryId, valueCents], idx) => ({
-      label: data.categories.find((category) => category.id === categoryId)?.name ?? 'Categoria',
-      valueCents,
-      color: idx % 2 === 0 ? '#f59e0b' : '#fbbf24',
-    }))
-  }, [data, filteredTransactions])
+  const [summary, setSummary] = useState({
+    receitasCents: 0,
+    despesasCents: 0,
+    count: 0,
+    expensesByCategory: [] as Array<{ categoryName: string; amountCents: number }>,
+  })
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
 
   const periodError = dateFrom && dateTo && dateFrom > dateTo ? 'A data inicial não pode ser maior que a final.' : null
+
+  useEffect(() => {
+    if (loading || !data || periodError) return
+    const loadSummary = async () => {
+      setSummaryLoading(true)
+      setSummaryError(null)
+      try {
+        setSummary(await getTransactionSummary({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }))
+      } catch (e) {
+        setSummaryError(e instanceof Error ? e.message : 'Não foi possível carregar o resumo')
+      } finally {
+        setSummaryLoading(false)
+      }
+    }
+    void loadSummary()
+  }, [data, dateFrom, dateTo, getTransactionSummary, loading, periodError])
+
+  const totals = {
+    receitas: summary.receitasCents,
+    despesas: summary.despesasCents,
+  }
+
+  const expensesByCategory = useMemo(() => {
+    return summary.expensesByCategory.map((item, idx) => ({
+      label: item.categoryName,
+      valueCents: item.amountCents,
+      color: idx % 2 === 0 ? '#f59e0b' : '#fbbf24',
+    }))
+  }, [summary.expensesByCategory])
+
   const periodLabel = useMemo(() => {
     if (dateFrom && dateTo) return `${formatBRDate(dateFrom)} até ${formatBRDate(dateTo)}`
     if (dateFrom) return `A partir de ${formatBRDate(dateFrom)}`
@@ -101,7 +110,7 @@ export default function GraficosPage() {
           <div>
             <div className="dateFilterTitle">Filtrar gráficos por data</div>
             <div className="dateFilterSubtitle">
-              {filteredTransactions.length} transação{filteredTransactions.length === 1 ? '' : 'ões'} no período
+              {summary.count} transação{summary.count === 1 ? '' : 'ões'} no período
             </div>
           </div>
           <div className="dateFilterActions">
@@ -129,6 +138,14 @@ export default function GraficosPage() {
       {periodError ? (
         <div className="card">
           <div className="chartEmpty">{periodError}</div>
+        </div>
+      ) : summaryError ? (
+        <div className="card">
+          <div className="chartEmpty">{summaryError}</div>
+        </div>
+      ) : summaryLoading ? (
+        <div className="card">
+          <PageLoader />
         </div>
       ) : tab === 'resumo' ? (
         <div className="grid2">

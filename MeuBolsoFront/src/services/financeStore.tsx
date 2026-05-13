@@ -10,6 +10,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const { activeEnvironmentId, loading: environmentsLoading } = useEnvironment()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<FinanceData | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const repository: FinanceRepository = useMemo(() => new HttpFinanceRepository(), [])
 
@@ -19,13 +20,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     try {
       const next = await repository.load(activeEnvironmentId)
       setData(next)
-    } catch {
-      setData({
-        categories: [],
-        transactions: [],
-        budgets: [],
-        goals: [],
-      })
+      setError(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível carregar os dados financeiros')
+      setData((current) =>
+        current ?? {
+          categories: [],
+          transactions: [],
+          budgets: [],
+          goals: [],
+        },
+      )
     } finally {
       setLoading(false)
     }
@@ -40,12 +45,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     () => ({
       loading,
       data,
+      error,
       refresh,
       addCategory: async (input) => {
         const created = await repository.addCategory(input, activeEnvironmentId)
         await refresh()
         return created
       },
+      listTransactions: (input) => repository.listTransactions(input, activeEnvironmentId),
+      getTransactionSummary: (input) => repository.getTransactionSummary(input, activeEnvironmentId),
       addTransaction: async (input) => {
         const created = await repository.addTransaction(input, activeEnvironmentId)
         await refresh()
@@ -90,7 +98,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loading, data, activeEnvironmentId, environmentsLoading],
+    [loading, data, error, activeEnvironmentId, environmentsLoading],
   )
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>

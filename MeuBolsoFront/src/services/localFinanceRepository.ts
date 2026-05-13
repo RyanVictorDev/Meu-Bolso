@@ -7,7 +7,11 @@ import type {
   AddGoalInput,
   AddTransactionInput,
   FinanceRepository,
+  ListTransactionsInput,
   SetBudgetLimitInput,
+  TransactionPage,
+  TransactionSummary,
+  TransactionSummaryInput,
   UpdateGoalInput,
 } from './financeRepository'
 
@@ -221,6 +225,53 @@ export class LocalFinanceRepository implements FinanceRepository {
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     return category
+  }
+
+  async listTransactions(input: ListTransactionsInput): Promise<TransactionPage> {
+    const data = await this.load()
+    const page = Math.max(0, input.page ?? 0)
+    const size = Math.min(Math.max(1, input.size ?? 20), 100)
+    const start = input.month ? `${input.month}-01` : input.dateFrom
+    const end = input.month ? `${input.month}-31` : input.dateTo
+    const search = input.search?.trim().toLowerCase()
+    const filtered = data.transactions
+      .filter((tx) => {
+        if (start && tx.occurredOn < start) return false
+        if (end && tx.occurredOn > end) return false
+        if (search) {
+          const category = data.categories.find((item) => item.id === tx.categoryId)
+          const amount = (tx.amountCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+          const haystack = [tx.description, category?.name, tx.createdBy?.name, tx.createdBy?.email, amount].filter(Boolean).join(' ').toLowerCase()
+          if (!haystack.includes(search)) return false
+        }
+        return true
+      })
+      .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt))
+    const offset = page * size
+    return {
+      content: filtered.slice(offset, offset + size),
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size),
+    }
+  }
+
+  async getTransactionSummary(input: TransactionSummaryInput): Promise<TransactionSummary> {
+    const page = await this.listTransactions({ ...input, page: 0, size: 100 })
+    const despesas = page.content.filter((tx) => tx.type === 'DESPESA')
+    const expensesByCategory = new Map<string, number>()
+    for (const tx of despesas) {
+      const data = await this.load()
+      const categoryName = data.categories.find((category) => category.id === tx.categoryId)?.name ?? 'Categoria'
+      expensesByCategory.set(categoryName, (expensesByCategory.get(categoryName) ?? 0) + tx.amountCents)
+    }
+    return {
+      receitasCents: page.content.filter((tx) => tx.type === 'RECEITA').reduce((acc, tx) => acc + tx.amountCents, 0),
+      despesasCents: despesas.reduce((acc, tx) => acc + tx.amountCents, 0),
+      count: page.totalElements,
+      expensesByCategory: Array.from(expensesByCategory.entries()).map(([categoryName, amountCents]) => ({ categoryName, amountCents })),
+    }
   }
 
   async addTransaction(input: AddTransactionInput): Promise<Transaction> {

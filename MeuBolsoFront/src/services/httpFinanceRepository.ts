@@ -6,7 +6,11 @@ import type {
   AddGoalInput,
   AddTransactionInput,
   FinanceRepository,
+  ListTransactionsInput,
   SetBudgetLimitInput,
+  TransactionPage,
+  TransactionSummary,
+  TransactionSummaryInput,
   UpdateGoalInput,
 } from './financeRepository'
 
@@ -21,6 +25,13 @@ function withEnvironment(path: string, environmentId?: string | null) {
   if (!environmentId) return path
   const sep = path.includes('?') ? '&' : '?'
   return `${path}${sep}environmentId=${encodeURIComponent(environmentId)}`
+}
+
+function withQuery(path: string, params: Record<string, string | number | undefined | null>) {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  if (entries.length === 0) return path
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}${entries.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&')}`
 }
 
 function normalizeFinanceData(payload: ApiFinanceData): FinanceData {
@@ -51,6 +62,37 @@ export class HttpFinanceRepository implements FinanceRepository {
       method: 'POST',
       body: input,
     })
+  }
+
+  async listTransactions(input: ListTransactionsInput, environmentId?: string | null): Promise<TransactionPage> {
+    return apiRequest<TransactionPage>(
+      withEnvironment(
+        withQuery('/api/transactions', {
+          dateFrom: input.dateFrom,
+          dateTo: input.dateTo,
+          month: input.month,
+          search: input.search,
+          page: input.page,
+          size: input.size,
+        }),
+        environmentId,
+      ),
+      { method: 'GET' },
+    )
+  }
+
+  async getTransactionSummary(input: TransactionSummaryInput, environmentId?: string | null): Promise<TransactionSummary> {
+    return apiRequest<TransactionSummary>(
+      withEnvironment(
+        withQuery('/api/transactions/summary', {
+          dateFrom: input.dateFrom,
+          dateTo: input.dateTo,
+          month: input.month,
+        }),
+        environmentId,
+      ),
+      { method: 'GET' },
+    )
   }
 
   async addTransaction(input: AddTransactionInput, environmentId?: string | null): Promise<Transaction> {

@@ -6,11 +6,13 @@ import HamburgerIcon from './shell/HamburgerIcon'
 import SidebarBrand from './shell/SidebarBrand'
 import SidebarNav from './shell/SidebarNav'
 import UserMenu from './shell/UserMenu'
+import { useFinance } from '../services/useFinance'
 
 type AppShellProps = PropsWithChildren
 
 export default function AppShell({ children }: AppShellProps) {
   const location = useLocation()
+  const { error, refresh } = useFinance()
   const [collapsed, setCollapsed] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -56,6 +58,14 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
         </div>
         <div className="content">
+          {error ? (
+            <div className="emptyState" role="alert">
+              {error}{' '}
+              <button type="button" className="smallBtn" onClick={() => void refresh()}>
+                Tentar novamente
+              </button>
+            </div>
+          ) : null}
           <div className="contentInner" key={location.pathname}>
             <div className="pageEnter">{children}</div>
           </div>

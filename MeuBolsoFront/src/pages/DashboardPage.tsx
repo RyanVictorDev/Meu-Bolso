@@ -1,16 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatBRDate, formatBRLFromCents, monthLabelFromYYYYMM as monthLabelFromYYYYMMUtil } from '../domain/finance'
+import type { Transaction } from '../domain/finance'
 import { useFinance } from '../services/useFinance'
 import ReceitasDespesasChart from '../components/charts/ReceitasDespesasChart'
 import DespesasPorCategoriaDonutChart from '../components/charts/DespesasPorCategoriaDonutChart'
 import CategoryIcon from '../components/icons/CategoryIcon'
 import DashboardSkeleton from '../components/DashboardSkeleton'
-
-type TxType = 'RECEITA' | 'DESPESA'
-
-function sumByType(transactions: Array<{ type: TxType; amountCents: number }>, type: TxType) {
-  return transactions.filter((t) => t.type === type).reduce((acc, t) => acc + t.amountCents, 0)
-}
 
 function previousMonthOf(month: string) {
   const [year, monthNumber] = month.split('-').map(Number)
@@ -44,12 +39,14 @@ function StatIcon({ variant }: { variant: 'in' | 'out' | 'edit' }) {
 }
 
 export default function DashboardPage() {
-  const { loading, data } = useFinance()
+  const { loading, data, getTransactionSummary, listTransactions } = useFinance()
+  const [monthSummary, setMonthSummary] = useState({ receitasCents: 0, despesasCents: 0, expensesByCategory: [] as Array<{ categoryName: string; amountCents: number }> })
+  const [previousMonthExpensesCents, setPreviousMonthExpensesCents] = useState(0)
+  const [recentTxs, setRecentTxs] = useState<Transaction[]>([])
   const monthOptions = useMemo(() => {
     const set = new Set<string>()
     const now = new Date()
     set.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
-    data?.transactions.forEach((tx) => set.add(tx.occurredOn.slice(0, 7)))
     data?.budgets.forEach((budget) => set.add(budget.month))
     return Array.from(set).sort((a, b) => b.localeCompare(a))
   }, [data])
@@ -57,22 +54,24 @@ export default function DashboardPage() {
 
   const activeMonth = selectedMonth || monthOptions[0] || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
 
-  const monthTransactions = useMemo(() => {
-    if (!data) return []
-    return data.transactions.filter((t) => t.occurredOn.startsWith(activeMonth))
-  }, [activeMonth, data])
+  useEffect(() => {
+    if (loading || !data) return
+    const loadDashboardTransactions = async () => {
+      const [summary, previousSummary, recent] = await Promise.all([
+        getTransactionSummary({ month: activeMonth }),
+        getTransactionSummary({ month: previousMonthOf(activeMonth) }),
+        listTransactions({ month: activeMonth, page: 0, size: 5 }),
+      ])
+      setMonthSummary(summary)
+      setPreviousMonthExpensesCents(previousSummary.despesasCents)
+      setRecentTxs(recent.content)
+    }
+    void loadDashboardTransactions()
+  }, [activeMonth, data, getTransactionSummary, listTransactions, loading])
 
-  const receitasCents = useMemo(() => sumByType(monthTransactions, 'RECEITA'), [monthTransactions])
-  const despesasCents = useMemo(() => sumByType(monthTransactions, 'DESPESA'), [monthTransactions])
+  const receitasCents = monthSummary.receitasCents
+  const despesasCents = monthSummary.despesasCents
   const saldoCents = receitasCents - despesasCents
-  const previousMonthExpensesCents = useMemo(() => {
-    if (!data) return 0
-    const previousMonth = previousMonthOf(activeMonth)
-    return sumByType(
-      data.transactions.filter((t) => t.occurredOn.startsWith(previousMonth)),
-      'DESPESA',
-    )
-  }, [activeMonth, data])
   const expensesDeltaCents = despesasCents - previousMonthExpensesCents
 
   const budgetsTotalCents = useMemo(() => {
@@ -83,19 +82,8 @@ export default function DashboardPage() {
   const withinBudget = budgetsTotalCents > 0 && despesasCents <= budgetsTotalCents
 
   const expensesByCategory = useMemo(() => {
-    if (!data) return []
-    const expenseTx = monthTransactions.filter((t) => t.type === 'DESPESA')
-    const totals = new Map<string, number>()
-    for (const tx of expenseTx) {
-      totals.set(tx.categoryId, (totals.get(tx.categoryId) ?? 0) + tx.amountCents)
-    }
-    return Array.from(totals.entries())
-      .map(([categoryId, amountCents]) => {
-        const categoryName = data.categories.find((c) => c.id === categoryId)?.name ?? 'Categoria'
-        return { categoryId, categoryName, amountCents }
-      })
-      .sort((a, b) => b.amountCents - a.amountCents)
-  }, [data, monthTransactions])
+    return monthSummary.expensesByCategory.map((item) => ({ categoryName: item.categoryName, amountCents: item.amountCents }))
+  }, [monthSummary.expensesByCategory])
 
   const donutSegments = useMemo(() => {
     if (expensesByCategory.length === 0) return []
@@ -106,13 +94,6 @@ export default function DashboardPage() {
       color: idx % 2 === 0 ? baseColor : '#fbbf24',
     }))
   }, [expensesByCategory])
-
-  const recentTxs = useMemo(() => {
-    return monthTransactions
-      .slice()
-      .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
-      .slice(0, 5)
-  }, [monthTransactions])
 
   const goalSummary = useMemo(() => {
     const activeGoals = data?.goals.filter((goal) => !goal.archived) ?? []
@@ -231,7 +212,7 @@ export default function DashboardPage() {
       <div className="grid2" style={{ marginTop: 14 }}>
         <div className="card">
           <div className="sectionTitle">Receitas vs Despesas</div>
-          {monthTransactions.length === 0 ? (
+          {receitasCents === 0 && despesasCents === 0 ? (
             <div className="chartEmpty">Sem transações neste mês</div>
           ) : (
             <ReceitasDespesasChart revenuesCents={receitasCents} expensesCents={despesasCents} />

@@ -5,15 +5,22 @@ import type {
   AddGoalContributionInput,
   AddGoalInput,
   AddTransactionInput,
+  ListTransactionsInput,
   SetBudgetLimitInput,
+  TransactionPage,
+  TransactionSummary,
+  TransactionSummaryInput,
   UpdateGoalInput,
 } from './financeRepository'
 
 export type FinanceContextValue = {
   loading: boolean
   data: FinanceData | null
+  error: string | null
   refresh: () => Promise<void>
   addCategory: (input: AddCategoryInput) => Promise<Category>
+  listTransactions: (input: ListTransactionsInput) => Promise<TransactionPage>
+  getTransactionSummary: (input: TransactionSummaryInput) => Promise<TransactionSummary>
   addTransaction: (input: AddTransactionInput) => Promise<Transaction>
   updateTransaction: (id: string, input: AddTransactionInput) => Promise<Transaction>
   deleteTransaction: (id: string) => Promise<void>

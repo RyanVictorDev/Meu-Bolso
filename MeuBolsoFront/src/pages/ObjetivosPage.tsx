@@ -132,6 +132,11 @@ export default function ObjetivosPage() {
     }
   }
 
+  const confirmDeleteGoal = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta meta e seus aportes? Esta ação não pode ser desfeita.')) return
+    await deleteGoal(id)
+  }
+
   if (loading || !data) {
     return (
       <>
@@ -185,7 +190,7 @@ export default function ObjetivosPage() {
                   {canEdit ? (
                     <>
                       <ActionIconButton action="edit" onClick={() => openGoalForm(goal)} aria-label="Editar meta" />
-                      <ActionIconButton action="delete" onClick={() => void deleteGoal(goal.id)} aria-label="Excluir meta" />
+                      <ActionIconButton action="delete" onClick={() => void confirmDeleteGoal(goal.id)} aria-label="Excluir meta" />
                     </>
                   ) : null}
                 </div>

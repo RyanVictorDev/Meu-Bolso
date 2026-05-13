@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 
@@ -21,9 +21,27 @@ export default function Modal({
   children: ReactNode
   footer?: ReactNode
 }) {
+  const modalRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      if (e.key !== 'Tab') return
+
+      const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusable?.length) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -31,9 +49,16 @@ export default function Modal({
 
   useEffect(() => {
     const prev = document.body.style.overflow
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
+    window.setTimeout(() => {
+      modalRef.current
+        ?.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+        ?.focus()
+    }, 0)
     return () => {
       document.body.style.overflow = prev
+      previousActiveElement?.focus()
     }
   }, [])
 
@@ -47,7 +72,7 @@ export default function Modal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal">
+      <div className="modal" ref={modalRef}>
         <div className="modalHeader">
           <div className="modalTitle">{title}</div>
           <button className="modalCloseBtn" onClick={onClose} type="button" aria-label="Fechar modal" title="Fechar">

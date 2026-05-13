@@ -5,7 +5,7 @@ Aplicacao de controle financeiro pessoal com frontend React e backend Spring Boo
 ## Estrutura
 
 - `MeuBolsoFront/`: frontend React + Vite
-- `v1/v1/`: backend Spring Boot + PostgreSQL + Flyway
+- `back/`: backend Spring Boot + PostgreSQL + Flyway
 
 ## Requisitos
 
@@ -19,7 +19,7 @@ Aplicacao de controle financeiro pessoal com frontend React e backend Spring Boo
 Diretorio:
 
 ```bash
-cd v1/v1
+cd back
 ```
 
 Variaveis de ambiente principais:
@@ -28,18 +28,19 @@ Variaveis de ambiente principais:
 - `DB_URL` (default `jdbc:postgresql://localhost:5432/meubolso`)
 - `DB_USER` (default `postgres`)
 - `DB_PASSWORD` (default `postgres`)
-- `JWT_SECRET` (obrigatorio em producao, minimo recomendado 64+ caracteres)
+- `JWT_SECRET` (obrigatorio, minimo 64 caracteres)
 - `JWT_ACCESS_MINUTES` (default `30`)
 - `JWT_REFRESH_DAYS` (default `14`)
 - `CORS_ALLOWED_ORIGINS` (default `http://localhost:5173`)
-- `APP_SEED_ADMIN_NAME` (default `Administrador`)
-- `APP_SEED_ADMIN_EMAIL` (default `admin@gggg.com`)
-- `APP_SEED_ADMIN_PASSWORD` (default `admin@gggg.com`)
+- `APP_SEED_ADMIN_ENABLED` (default `false`)
+- `APP_SEED_ADMIN_NAME` (usado somente se o seed admin estiver habilitado)
+- `APP_SEED_ADMIN_EMAIL` (usado somente se o seed admin estiver habilitado)
+- `APP_SEED_ADMIN_PASSWORD` (usado somente se o seed admin estiver habilitado)
 
 Executar:
 
 ```bash
-./mvnw spring-boot:run
+JWT_SECRET=troque-por-um-segredo-aleatorio-com-pelo-menos-64-caracteres ./mvnw spring-boot:run
 ```
 
 Swagger/OpenAPI:
@@ -73,9 +74,7 @@ npm run dev
 - Rotas privadas no frontend com redirecionamento para `/login`
 - Dashboard, categorias, transacoes e orcamentos consumindo API real
 - Reset de dados por usuario (`POST /api/finance/reset`)
-- Seed automatica de admin:
-  - Email: `admin@gggg.com`
-  - Senha: `admin@gggg.com`
+- Seed opcional de admin via `APP_SEED_ADMIN_ENABLED=true`
 
 ## Docker Compose (stack completa)
 
@@ -83,13 +82,14 @@ Arquivos adicionados:
 
 - `docker-compose.yml` (root)
 - `.env.example` (root)
-- `v1/v1/Dockerfile`
+- `back/Dockerfile`
 - `MeuBolsoFront/Dockerfile`
 
 Passos:
 
 ```bash
 cp .env.example .env
+# Edite JWT_SECRET, senhas e demais valores sensiveis antes de subir.
 docker compose up -d --build
 ```
 
@@ -116,7 +116,7 @@ docker compose down -v
 Backend:
 
 ```bash
-cd v1/v1
+cd back
 ./mvnw test
 ```
 

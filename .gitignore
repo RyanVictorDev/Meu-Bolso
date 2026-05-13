@@ -12,8 +12,8 @@ MeuBolsoFront/coverage/
 MeuBolsoFront/*.tsbuildinfo
 
 # Backend (Maven / Spring Boot)
-v1/v1/target/
-v1/v1/.mvn/wrapper/maven-wrapper.jar
+back/target/
+back/.mvn/wrapper/maven-wrapper.jar
 
 # Logs
 logs/

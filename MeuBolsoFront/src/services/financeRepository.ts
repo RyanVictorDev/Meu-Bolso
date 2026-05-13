@@ -14,6 +14,36 @@ export interface AddTransactionInput {
   occurredOn: string // YYYY-MM-DD
 }
 
+export interface TransactionPage {
+  content: Transaction[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface ListTransactionsInput {
+  dateFrom?: string
+  dateTo?: string
+  month?: string
+  search?: string
+  page?: number
+  size?: number
+}
+
+export interface TransactionSummary {
+  receitasCents: number
+  despesasCents: number
+  count: number
+  expensesByCategory: Array<{ categoryName: string; amountCents: number }>
+}
+
+export interface TransactionSummaryInput {
+  dateFrom?: string
+  dateTo?: string
+  month?: string
+}
+
 export interface SetBudgetLimitInput {
   month: string // YYYY-MM
   categoryId: string // DESPESA category
@@ -42,6 +72,8 @@ export interface FinanceRepository {
   resetToSeed(environmentId?: string | null): Promise<FinanceData>
 
   addCategory(input: AddCategoryInput, environmentId?: string | null): Promise<Category>
+  listTransactions(input: ListTransactionsInput, environmentId?: string | null): Promise<TransactionPage>
+  getTransactionSummary(input: TransactionSummaryInput, environmentId?: string | null): Promise<TransactionSummary>
   addTransaction(input: AddTransactionInput, environmentId?: string | null): Promise<Transaction>
   updateTransaction(id: string, input: AddTransactionInput, environmentId?: string | null): Promise<Transaction>
   deleteTransaction(id: string, environmentId?: string | null): Promise<void>

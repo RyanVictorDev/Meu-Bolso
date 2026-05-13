@@ -8,7 +8,7 @@ import {
   MAX_AMOUNT_CENTS,
   parseAmountToCents,
 } from '../domain/finance'
-import type { TransactionType } from '../domain/finance'
+import type { Transaction, TransactionType } from '../domain/finance'
 import { useFinance } from '../services/useFinance'
 import { useEnvironment } from '../services/useEnvironment'
 import Button from '../components/ui/Button'
@@ -21,6 +21,7 @@ import Select from '../components/ui/Select'
 import PageLoader from '../components/PageLoader'
 
 const TRANSACTION_DESCRIPTION_MAX_LENGTH = 240
+const PAGE_SIZE = 20
 
 function todayISO() {
   const d = new Date()
@@ -35,13 +36,20 @@ export default function TransacoesPage() {
   }, [])
   const currentMonthStart = useMemo(() => `${currentMonth}-01`, [currentMonth])
 
-  const { loading, data, addTransaction, updateTransaction, deleteTransaction } = useFinance()
-  const { canEdit } = useEnvironment()
+  const { loading, data, listTransactions, addTransaction, updateTransaction, deleteTransaction } = useFinance()
+  const { activeEnvironmentId, canEdit } = useEnvironment()
   const [open, setOpen] = useState(false)
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [dateFrom, setDateFrom] = useState(currentMonthStart)
   const [dateTo, setDateTo] = useState(todayISO())
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [totalElements, setTotalElements] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [transactionsError, setTransactionsError] = useState<string | null>(null)
 
   const [type, setType] = useState<TransactionType>('DESPESA')
   const [categoryId, setCategoryId] = useState<string>('')
@@ -55,14 +63,40 @@ export default function TransacoesPage() {
     return data.categories.filter((c) => c.type === type).sort((a, b) => a.name.localeCompare(b.name))
   }, [data, type])
 
-  const transactions = useMemo(() => {
-    if (!data) return []
-    return data.transactions.filter((tx) => {
-      if (dateFrom && tx.occurredOn < dateFrom) return false
-      if (dateTo && tx.occurredOn > dateTo) return false
-      return true
-    })
-  }, [data, dateFrom, dateTo])
+  const loadTransactions = async (nextPage = page) => {
+    if (loading || !data || periodError) return
+    setTransactionsLoading(true)
+    setTransactionsError(null)
+    try {
+      const result = await listTransactions({
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        search: search.trim() || undefined,
+        page: nextPage,
+        size: PAGE_SIZE,
+      })
+      setTransactions(result.content)
+      setTotalElements(result.totalElements)
+      setTotalPages(result.totalPages)
+      setPage(result.page)
+    } catch (e) {
+      setTransactionsError(e instanceof Error ? e.message : 'Não foi possível carregar as transações')
+      setTransactions([])
+      setTotalElements(0)
+      setTotalPages(0)
+    } finally {
+      setTransactionsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    setPage(0)
+  }, [dateFrom, dateTo, search, activeEnvironmentId])
+
+  useEffect(() => {
+    void loadTransactions(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, dateFrom, dateTo, search, activeEnvironmentId, loading, data])
 
   useEffect(() => {
     if (!open) return
@@ -148,9 +182,17 @@ export default function TransacoesPage() {
 
       setOpen(false)
       resetForm()
+      await loadTransactions(0)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao criar transação')
     }
+  }
+
+  const confirmDeleteTransaction = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.')) return false
+    await deleteTransaction(id)
+    await loadTransactions(page)
+    return true
   }
 
   if (loading || !data) {
@@ -184,8 +226,8 @@ export default function TransacoesPage() {
       <div className="dateFilterCard">
         <div className="dateFilterHeader">
           <div>
-            <div className="dateFilterTitle">Filtrar por data</div>
-            <div className="dateFilterSubtitle">{transactions.length} transação{transactions.length === 1 ? '' : 'ões'} no período</div>
+            <div className="dateFilterTitle">Filtrar transações</div>
+            <div className="dateFilterSubtitle">{totalElements} transação{totalElements === 1 ? '' : 'ões'} no período</div>
           </div>
           <div className="dateFilterActions">
             <button type="button" className="smallBtn" onClick={resetToCurrentMonth}>
@@ -197,6 +239,14 @@ export default function TransacoesPage() {
           </div>
         </div>
         <div className="dateFilterFields">
+          <div className="field">
+            <div className="label">Buscar</div>
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Descrição, categoria, usuário ou valor"
+            />
+          </div>
           <div className="field">
             <div className="label">De</div>
             <DateInput value={dateFrom} onChange={setDateFrom} max={dateTo || undefined} />
@@ -211,14 +261,23 @@ export default function TransacoesPage() {
 
       {periodError ? (
         <EmptyState>{periodError}</EmptyState>
+      ) : transactionsError ? (
+        <div className="emptyState" role="alert">
+          {transactionsError}{' '}
+          <button type="button" className="smallBtn" onClick={() => void loadTransactions(page)}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : transactionsLoading ? (
+        <div className="card">
+          <PageLoader />
+        </div>
       ) : transactions.length === 0 ? (
         <EmptyState>Nenhuma transação registrada. Clique em &quot;Nova Transação&quot; para começar.</EmptyState>
       ) : (
-        <div className="list">
-          {transactions
-            .slice()
-            .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
-            .map((tx) => {
+        <>
+          <div className="list">
+            {transactions.map((tx) => {
               const cat = data.categories.find((c) => c.id === tx.categoryId)
               const categoryName = cat?.name ?? 'Categoria'
               const labelPrefix = cat?.emoji ? `${cat.emoji} ` : ''
@@ -240,14 +299,33 @@ export default function TransacoesPage() {
                     {canEdit ? (
                       <>
                         <ActionIconButton action="edit" onClick={() => openForEdit(tx)} aria-label="Editar transação" />
-                        <ActionIconButton action="delete" onClick={() => void deleteTransaction(tx.id)} aria-label="Excluir transação" />
+                        <ActionIconButton action="delete" onClick={() => void confirmDeleteTransaction(tx.id)} aria-label="Excluir transação" />
                       </>
                     ) : null}
                   </div>
                 </div>
               )
             })}
-        </div>
+          </div>
+          <div className="toolbar" style={{ marginTop: 14 }}>
+            <div className="muted" style={{ fontSize: 14 }}>
+              Página {page + 1} de {Math.max(totalPages, 1)}
+            </div>
+            <div className="dateFilterActions">
+              <button type="button" className="smallBtn" disabled={page <= 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>
+                Anterior
+              </button>
+              <button
+                type="button"
+                className="smallBtn"
+                disabled={page + 1 >= totalPages}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {open ? (
@@ -343,7 +421,7 @@ export default function TransacoesPage() {
       {detailsId && data ? (
         <Modal title="Detalhes da Transação" onClose={() => setDetailsId(null)}>
           {(() => {
-            const tx = data.transactions.find((item) => item.id === detailsId)
+            const tx = transactions.find((item) => item.id === detailsId)
             if (!tx) return <EmptyState>Transação não encontrada.</EmptyState>
             const cat = data.categories.find((c) => c.id === tx.categoryId)
             return (
@@ -385,8 +463,9 @@ export default function TransacoesPage() {
                     <ActionIconButton
                       action="delete"
                       onClick={() => {
-                        void deleteTransaction(tx.id)
-                        setDetailsId(null)
+                        void confirmDeleteTransaction(tx.id).then((deleted) => {
+                          if (deleted) setDetailsId(null)
+                        })
                       }}
                       aria-label="Excluir transação"
                     />
