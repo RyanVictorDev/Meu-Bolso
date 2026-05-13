@@ -5,6 +5,8 @@ import type { FinanceData } from '../domain/finance'
 import type { FinanceRepository } from './financeRepository'
 import { FinanceContext, type FinanceContextValue } from './financeContext'
 import { useEnvironment } from './useEnvironment'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate } from '../i18n/messages'
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const { activeEnvironmentId, loading: environmentsLoading } = useEnvironment()
@@ -23,7 +25,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setData(next)
       setError(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível carregar os dados financeiros')
+      const loc = getStoredLocale()
+      setError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_FINANCE_LOAD', loc))
       setData((current) =>
         current ?? {
           categories: [],

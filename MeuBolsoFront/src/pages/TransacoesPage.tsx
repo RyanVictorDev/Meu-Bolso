@@ -22,6 +22,9 @@ import Select from '../components/ui/Select'
 import Snackbar from '../components/ui/Snackbar'
 import PageLoader from '../components/PageLoader'
 import type { SnackbarTone } from '../components/ui/Snackbar'
+import { useLocale } from '../i18n/useLocale'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate } from '../i18n/messages'
 
 const TRANSACTION_DESCRIPTION_MAX_LENGTH = 240
 const PAGE_SIZE = 20
@@ -42,6 +45,7 @@ export default function TransacoesPage() {
 
   const { loading, data, listTransactions, addTransaction, updateTransaction, deleteTransaction } = useFinance()
   const { activeEnvironmentId, canEdit } = useEnvironment()
+  const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -93,7 +97,8 @@ export default function TransacoesPage() {
       setTotalPages(result.totalPages)
       setPage(result.page)
     } catch (e) {
-      setTransactionsError(e instanceof Error ? e.message : 'Não foi possível carregar as transações')
+      const loc = getStoredLocale()
+      setTransactionsError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_TX_LIST_LOAD', loc))
       setTransactions([])
       setTotalElements(0)
       setTotalPages(0)
@@ -126,7 +131,10 @@ export default function TransacoesPage() {
     setCategoryId(categoriesForType[0].id)
   }, [open, categoryId, categoriesForType])
 
-  const periodError = dateFrom && dateTo && dateFrom > dateTo ? 'A data inicial não pode ser maior que a final.' : null
+  const periodError = useMemo(
+    () => (dateFrom && dateTo && dateFrom > dateTo ? t('ERR_DATE_FROM_AFTER_TO') : null),
+    [dateFrom, dateTo, t],
+  )
   const periodLabel = useMemo(() => {
     if (dateFrom && dateTo) return `${formatBRDate(dateFrom)} até ${formatBRDate(dateTo)}`
     if (dateFrom) return `A partir de ${formatBRDate(dateFrom)}`
@@ -175,16 +183,16 @@ export default function TransacoesPage() {
     setError(null)
     try {
       const cents = parseAmountToCents(amount)
-      if (!cents) throw new Error('Valor inválido')
-      if (cents > MAX_AMOUNT_CENTS) throw new Error('Valor excede o limite permitido')
-      if (!categoryId) throw new Error('Selecione uma categoria')
-      if (!occurredOn) throw new Error('Data inválida')
-      if (!isValidISODate(occurredOn)) throw new Error('Data inválida')
+      if (!cents) throw new Error(t('ERR_AMOUNT_INVALID'))
+      if (cents > MAX_AMOUNT_CENTS) throw new Error(t('ERR_AMOUNT_MAX'))
+      if (!categoryId) throw new Error(t('ERR_CATEGORY_REQUIRED'))
+      if (!occurredOn) throw new Error(t('ERR_DATE_INVALID'))
+      if (!isValidISODate(occurredOn)) throw new Error(t('ERR_DATE_INVALID'))
       if (occurredOn < '2000-01-01' || occurredOn > '2200-12-31') {
-        throw new Error('Data deve estar entre 2000-01-01 e 2200-12-31')
+        throw new Error(t('ERR_DATE_RANGE_CLIENT'))
       }
       if (description.trim().length > TRANSACTION_DESCRIPTION_MAX_LENGTH) {
-        throw new Error('Descrição deve ter no máximo 240 caracteres')
+        throw new Error(t('ERR_DESC_MAX_240'))
       }
 
       const payload = {
@@ -207,7 +215,8 @@ export default function TransacoesPage() {
       await loadTransactions(wasEditing ? page : 0, { ignoreGlobalLoading: true })
       showSnackbar('success', wasEditing ? 'Transação atualizada com sucesso.' : 'Transação criada com sucesso.')
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Erro ao salvar transação'
+      const loc = getStoredLocale()
+      const message = e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_SAVE_TX', loc)
       setError(message)
       showSnackbar('error', message)
     }
@@ -226,7 +235,8 @@ export default function TransacoesPage() {
       if (detailsId === deletedId) setDetailsId(null)
       showSnackbar('success', 'Transação excluída com sucesso.')
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Erro ao excluir transação'
+      const loc = getStoredLocale()
+      const message = e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_DELETE_TX', loc)
       setDeleteError(message)
     } finally {
       setDeleteLoading(false)

@@ -5,6 +5,9 @@ import Button from '../components/ui/Button'
 import { ApiError } from '../services/apiClient'
 import { useAuth } from '../services/useAuth'
 import { useTheme } from '../theme/useTheme'
+import { useLocale } from '../i18n/useLocale'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate, type MessageKey } from '../i18n/messages'
 
 type AuthMode = 'login' | 'register'
 type AuthFieldErrors = Partial<Record<'name' | 'email' | 'password', string>>
@@ -24,56 +27,61 @@ function resolveNextPath(state: unknown): string {
   return '/'
 }
 
-function validateAuth(mode: AuthMode, name: string, email: string, password: string): AuthFieldErrors {
+function validateAuth(
+  mode: AuthMode,
+  name: string,
+  email: string,
+  password: string,
+  t: (k: MessageKey) => string,
+): AuthFieldErrors {
   const errors: AuthFieldErrors = {}
   const trimmedName = name.trim()
   const trimmedEmail = email.trim()
 
   if (mode === 'register') {
     if (trimmedName.length < REGISTER_RULES.name.min) {
-      errors.name = 'Informe um nome com pelo menos 2 caracteres.'
+      errors.name = t('AUTH_NAME_MIN')
     } else if (trimmedName.length > REGISTER_RULES.name.max) {
-      errors.name = 'O nome deve ter no máximo 120 caracteres.'
+      errors.name = t('AUTH_NAME_MAX')
     }
   }
 
   if (!trimmedEmail) {
-    errors.email = 'Informe seu e-mail.'
+    errors.email = t('AUTH_EMAIL_REQUIRED')
   } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
-    errors.email = 'Informe um e-mail válido.'
+    errors.email = t('AUTH_EMAIL_INVALID')
   } else if (mode === 'register' && trimmedEmail.length > REGISTER_RULES.email.max) {
-    errors.email = 'O e-mail deve ter no máximo 180 caracteres.'
+    errors.email = t('AUTH_EMAIL_MAX')
   }
 
   if (!password) {
-    errors.password = 'Informe sua senha.'
+    errors.password = t('AUTH_PASSWORD_REQUIRED')
   } else if (mode === 'register' && password.length < REGISTER_RULES.password.min) {
-    errors.password = 'A senha deve ter pelo menos 8 caracteres.'
+    errors.password = t('AUTH_PASSWORD_MIN')
   } else if (mode === 'register' && password.length > REGISTER_RULES.password.max) {
-    errors.password = 'A senha deve ter no máximo 80 caracteres.'
+    errors.password = t('AUTH_PASSWORD_MAX')
   }
 
   return errors
 }
 
-function apiFieldsToAuthErrors(fields: Record<string, string>): AuthFieldErrors {
+function apiFieldsToAuthErrors(fields: Record<string, string>, t: (k: MessageKey) => string): AuthFieldErrors {
   const next: AuthFieldErrors = {}
-  if (fields.name) next.name = 'Informe um nome entre 2 e 120 caracteres.'
-  if (fields.email) next.email = 'Informe um e-mail válido com até 180 caracteres.'
-  if (fields.password) next.password = 'A senha deve ter entre 8 e 80 caracteres.'
+  if (fields.name) next.name = t('AUTH_FIELD_NAME')
+  if (fields.email) next.email = t('AUTH_FIELD_EMAIL')
+  if (fields.password) next.password = t('AUTH_FIELD_PASSWORD')
   return next
 }
 
-function authApiMessage(error: ApiError, fieldErrors: AuthFieldErrors): string {
-  if (error.status === 401) return 'E-mail ou senha inválidos.'
-  if (error.status === 409) return 'Este e-mail já está cadastrado.'
-  if (Object.keys(fieldErrors).length > 0) return 'Revise os campos destacados para continuar.'
-  return error.message
+function authApiMessage(_error: ApiError, fieldErrors: AuthFieldErrors, t: (k: MessageKey) => string): string {
+  if (Object.keys(fieldErrors).length > 0) return t('AUTH_REVIEW_FIELDS')
+  return _error.message
 }
 
 export default function LoginPage() {
   const { login, register, loading, isAuthenticated } = useAuth()
   const { mode: themeMode, setMode: setThemeMode } = useTheme()
+  const { locale, setLocale, t } = useLocale()
   const navigate = useNavigate()
   const location = useLocation()
   const [mode, setMode] = useState<AuthMode>('login')
@@ -94,10 +102,10 @@ export default function LoginPage() {
 
   const submit = async () => {
     setError(null)
-    const validationErrors = validateAuth(mode, name, email, password)
+    const validationErrors = validateAuth(mode, name, email, password, t)
     setFieldErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) {
-      setError('Revise os campos destacados para continuar.')
+      setError(t('AUTH_REVIEW_FIELDS'))
       return
     }
 
@@ -110,14 +118,15 @@ export default function LoginPage() {
       }
       void navigate(nextPath, { replace: true })
     } catch (e) {
+      const loc = getStoredLocale()
       if (e instanceof ApiError) {
-        const apiFieldErrors = apiFieldsToAuthErrors(e.fields)
+        const apiFieldErrors = apiFieldsToAuthErrors(e.fields, t)
         setFieldErrors(apiFieldErrors)
-        setError(authApiMessage(e, apiFieldErrors))
+        setError(authApiMessage(e, apiFieldErrors, t))
       } else if (e instanceof Error) {
-        setError(e.message)
+        setError(localizeThrownErrorMessage(e.message, loc))
       } else {
-        setError('Não foi possível autenticar agora')
+        setError(translate('ERR_AUTH_NOW', loc))
       }
     } finally {
       setPending(false)
@@ -129,21 +138,39 @@ export default function LoginPage() {
       <div className="authCard">
         <div className="authTop">
           <div className="authBadge">MeuBolso</div>
-          <div className="authThemeToggle" role="group" aria-label="Tema da aplicação">
-            <button
-              type="button"
-              className={`authThemeBtn ${themeMode === 'light' ? 'authThemeBtnActive' : ''}`}
-              onClick={() => setThemeMode('light')}
-            >
-              Claro
-            </button>
-            <button
-              type="button"
-              className={`authThemeBtn ${themeMode === 'dark' ? 'authThemeBtnActive' : ''}`}
-              onClick={() => setThemeMode('dark')}
-            >
-              Escuro
-            </button>
+          <div className="authTopControls">
+            <div className="authThemeToggle" role="group" aria-label="Tema da aplicação">
+              <button
+                type="button"
+                className={`authThemeBtn ${themeMode === 'light' ? 'authThemeBtnActive' : ''}`}
+                onClick={() => setThemeMode('light')}
+              >
+                Claro
+              </button>
+              <button
+                type="button"
+                className={`authThemeBtn ${themeMode === 'dark' ? 'authThemeBtnActive' : ''}`}
+                onClick={() => setThemeMode('dark')}
+              >
+                Escuro
+              </button>
+            </div>
+            <div className="authLangToggle" role="group" aria-label="Idioma / Language">
+              <button
+                type="button"
+                className={`authThemeBtn ${locale === 'pt-BR' ? 'authThemeBtnActive' : ''}`}
+                onClick={() => setLocale('pt-BR')}
+              >
+                PT
+              </button>
+              <button
+                type="button"
+                className={`authThemeBtn ${locale === 'en' ? 'authThemeBtnActive' : ''}`}
+                onClick={() => setLocale('en')}
+              >
+                EN
+              </button>
+            </div>
           </div>
         </div>
         <h1 className="authTitle">{mode === 'login' ? 'Entrar na sua conta' : 'Criar conta'}</h1>

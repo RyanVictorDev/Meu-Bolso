@@ -15,6 +15,9 @@ import CategoryIcon from '../components/icons/CategoryIcon'
 import PageLoader from '../components/PageLoader'
 import Snackbar from '../components/ui/Snackbar'
 import type { SnackbarTone } from '../components/ui/Snackbar'
+import { useLocale } from '../i18n/useLocale'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate } from '../i18n/messages'
 
 const CATEGORY_NAME_MAX_LENGTH = 80
 const MOBILE_COLLAPSE_MQ = '(max-width: 700px)'
@@ -76,6 +79,7 @@ function CategoryRows({
 export default function CategoriasPage() {
   const { loading, data, addCategory, updateCategory, deleteCategory } = useFinance()
   const { canEdit } = useEnvironment()
+  const { t } = useLocale()
   const narrow = useMediaQuery(MOBILE_COLLAPSE_MQ)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
@@ -135,8 +139,8 @@ export default function CategoriasPage() {
     setError(null)
     try {
       const trimmed = name.trim()
-      if (trimmed.length < 2) throw new Error('Nome da categoria inválido')
-      if (trimmed.length > CATEGORY_NAME_MAX_LENGTH) throw new Error('Nome da categoria deve ter no máximo 80 caracteres')
+      if (trimmed.length < 2) throw new Error(t('ERR_CATEGORY_NAME_SHORT'))
+      if (trimmed.length > CATEGORY_NAME_MAX_LENGTH) throw new Error(t('ERR_CATEGORY_NAME_MAX'))
       if (editingCategoryId) {
         await updateCategory(editingCategoryId, { name: trimmed, emoji: emoji ?? undefined })
         showSnackbar('success', 'Categoria atualizada com sucesso.')
@@ -146,7 +150,8 @@ export default function CategoriasPage() {
       }
       closeModal()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao salvar categoria')
+      const loc = getStoredLocale()
+      setError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_SAVE_CATEGORY', loc))
     }
   }
 
@@ -159,7 +164,8 @@ export default function CategoriasPage() {
       setDeleteCandidateId(null)
       showSnackbar('success', 'Categoria excluída com sucesso.')
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : 'Erro ao excluir categoria')
+      const loc = getStoredLocale()
+      setDeleteError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_DELETE_CATEGORY', loc))
     } finally {
       setDeleteLoading(false)
     }

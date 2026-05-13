@@ -15,6 +15,9 @@ import type {
   UpdateCategoryInput,
   UpdateGoalInput,
 } from './financeRepository'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { translate } from '../i18n/messages'
+import { labelField, repoFieldExceeds, repoFieldNonNegative, repoFieldPositive } from '../i18n/repoFieldErrors'
 
 const STORAGE_KEY = 'meubolso_finance_v1'
 const CATEGORY_NAME_MAX_LENGTH = 80
@@ -53,64 +56,72 @@ function normalizeSearchText(value: string) {
     .toLowerCase()
 }
 
+function loc() {
+  return getStoredLocale()
+}
+
 function assertPositiveAmountCents(value: number, field = 'Valor') {
+  const locale = loc()
+  const lf = labelField(field, locale)
   if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`${field} deve ser maior que zero`)
+    throw new Error(repoFieldPositive(lf, locale))
   }
   if (value > MAX_AMOUNT_CENTS) {
-    throw new Error(`${field} excede o limite permitido`)
+    throw new Error(repoFieldExceeds(lf, locale))
   }
 }
 
 function assertNonNegativeAmountCents(value: number, field = 'Valor') {
+  const locale = loc()
+  const lf = labelField(field, locale)
   if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`${field} deve ser maior ou igual a zero`)
+    throw new Error(repoFieldNonNegative(lf, locale))
   }
   if (value > MAX_AMOUNT_CENTS) {
-    throw new Error(`${field} excede o limite permitido`)
+    throw new Error(repoFieldExceeds(lf, locale))
   }
 }
 
 function assertTransactionDateIsValid(occurredOn: string) {
   if (!isValidISODate(occurredOn)) {
-    throw new Error('Data inválida')
+    throw new Error(translate('ERR_DATE_INVALID', loc()))
   }
   if (occurredOn < '2000-01-01' || occurredOn > '2200-12-31') {
-    throw new Error('Data deve estar entre 2000-01-01 e 2200-12-31')
+    throw new Error(translate('ERR_DATE_RANGE_CLIENT', loc()))
   }
 }
 
 function assertGoalDueOnIsValid(dueOn?: string) {
   if (!dueOn) {
-    throw new Error('Informe o prazo da meta')
+    throw new Error(translate('ERR_DUE_REQUIRED', loc()))
   }
   if (!isValidISODate(dueOn)) {
-    throw new Error('Prazo da meta inválido')
+    throw new Error(translate('ERR_DUE_INVALID', loc()))
   }
   if (dueOn < todayISO()) {
-    throw new Error('O prazo da meta não pode ser no passado')
+    throw new Error(translate('ERR_DUE_PAST', loc()))
   }
 }
 
 function assertGoalInputIsValid(input: AddGoalInput | UpdateGoalInput) {
   const name = input.name.trim()
-  if (!name) throw new Error('Informe um nome para a meta')
-  if (name.length > GOAL_NAME_MAX_LENGTH) throw new Error('Nome da meta deve ter no máximo 120 caracteres')
+  if (!name) throw new Error(translate('ERR_GOAL_NAME_REQUIRED', loc()))
+  if (name.length > GOAL_NAME_MAX_LENGTH) throw new Error(translate('ERR_GOAL_NAME_MAX', loc()))
   if ((input.description?.trim().length ?? 0) > GOAL_DESCRIPTION_MAX_LENGTH) {
-    throw new Error('Descrição deve ter no máximo 280 caracteres')
+    throw new Error(translate('ERR_GOAL_DESC_MAX', loc()))
   }
   assertPositiveAmountCents(input.targetCents, 'Valor alvo')
   assertGoalDueOnIsValid(input.dueOn)
 }
 
 function assertContributionInputIsValid(goal: Goal, input: AddGoalContributionInput) {
-  if (goal.archived) throw new Error('Não é possível aportar em uma meta arquivada')
+  if (goal.archived) throw new Error(translate('API_GOAL_ARCHIVED_CONTRIB', loc()))
   assertPositiveAmountCents(input.amountCents, 'Aporte')
-  if (!isValidISODate(input.contributedOn)) throw new Error('Data do aporte inválida')
-  if (input.contributedOn > todayISO()) throw new Error('A data do aporte não pode ser no futuro')
-  if (goal.dueOn && input.contributedOn > goal.dueOn) throw new Error('A data do aporte não pode passar do prazo da meta')
+  if (!isValidISODate(input.contributedOn)) throw new Error(translate('ERR_CONTRIB_DATE_INVALID', loc()))
+  if (input.contributedOn > todayISO()) throw new Error(translate('API_CONTRIB_FUTURE', loc()))
+  if (goal.dueOn && input.contributedOn > goal.dueOn) throw new Error(translate('API_CONTRIB_AFTER_DUE', loc()))
   if ((input.note?.trim().length ?? 0) > GOAL_CONTRIBUTION_NOTE_MAX_LENGTH) {
-    throw new Error('Observação deve ter no máximo 180 caracteres')
+    throw new Error(translate('ERR_NOTE_MAX_180', loc()))
   }
 }
 
@@ -193,11 +204,11 @@ export class LocalFinanceRepository implements FinanceRepository {
     const data = await this.load()
 
     if (!isCategoryType(input.type)) {
-      throw new Error('Tipo inválido')
+      throw new Error(translate('LOCAL_TYPE_INVALID', loc()))
     }
     const categoryName = input.name.trim()
     if (categoryName.length < 2 || categoryName.length > CATEGORY_NAME_MAX_LENGTH) {
-      throw new Error('Nome da categoria deve ter entre 2 e 80 caracteres')
+      throw new Error(translate('LOCAL_CATEGORY_NAME_LEN', loc()))
     }
 
     const existingByName = data.categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase() && c.type === input.type)
@@ -205,7 +216,7 @@ export class LocalFinanceRepository implements FinanceRepository {
 
     const emojiTrim = input.emoji?.trim()
     if ((emojiTrim?.length ?? 0) > CATEGORY_EMOJI_MAX_LENGTH) {
-      throw new Error('Ícone deve ter no máximo 16 caracteres')
+      throw new Error(translate('LOCAL_ICON_MAX', loc()))
     }
     const category: Category = {
       id: newId('cat'),
@@ -240,19 +251,19 @@ export class LocalFinanceRepository implements FinanceRepository {
     void _environmentId
     const data = await this.load()
     const idx = data.categories.findIndex((c) => c.id === id)
-    if (idx < 0) throw new Error('Categoria não encontrada')
+    if (idx < 0) throw new Error(translate('API_CATEGORY_NOT_FOUND', loc()))
     const categoryName = input.name.trim()
     if (categoryName.length < 2 || categoryName.length > CATEGORY_NAME_MAX_LENGTH) {
-      throw new Error('Nome da categoria deve ter entre 2 e 80 caracteres')
+      throw new Error(translate('LOCAL_CATEGORY_NAME_LEN', loc()))
     }
     const current = data.categories[idx]
     const duplicate = data.categories.find(
       (c) => c.id !== id && c.name.toLowerCase() === categoryName.toLowerCase() && c.type === current.type,
     )
-    if (duplicate) throw new Error('Já existe uma categoria com este nome')
+    if (duplicate) throw new Error(translate('API_CATEGORY_DUPLICATE', loc()))
     const emojiTrim = input.emoji?.trim()
     if ((emojiTrim?.length ?? 0) > CATEGORY_EMOJI_MAX_LENGTH) {
-      throw new Error('Ícone deve ter no máximo 16 caracteres')
+      throw new Error(translate('LOCAL_ICON_MAX', loc()))
     }
     const updated: Category = { ...current, name: categoryName }
     if (emojiTrim) {
@@ -269,10 +280,10 @@ export class LocalFinanceRepository implements FinanceRepository {
   async deleteCategory(id: string, _environmentId?: string | null): Promise<void> {
     void _environmentId
     const data = await this.load()
-    if (!data.categories.some((c) => c.id === id)) throw new Error('Categoria não encontrada')
+    if (!data.categories.some((c) => c.id === id)) throw new Error(translate('API_CATEGORY_NOT_FOUND', loc()))
     const txCount = data.transactions.filter((t) => t.categoryId === id).length
     if (txCount > 0) {
-      throw new Error('Não é possível excluir: existem transações nesta categoria.')
+      throw new Error(translate('API_CATEGORY_HAS_TX', loc()))
     }
     const next: FinanceData = {
       ...data,
@@ -336,12 +347,12 @@ export class LocalFinanceRepository implements FinanceRepository {
     assertTransactionDateIsValid(occurredOn)
     assertPositiveAmountCents(input.amountCents)
     if ((input.description?.trim().length ?? 0) > TRANSACTION_DESCRIPTION_MAX_LENGTH) {
-      throw new Error('Descrição deve ter no máximo 240 caracteres')
+      throw new Error(translate('ERR_DESC_MAX_240', loc()))
     }
 
     const category = data.categories.find((c) => c.id === input.categoryId)
-    if (!category) throw new Error('Categoria inválida')
-    if (category.type !== input.type) throw new Error('Tipo não corresponde à categoria')
+    if (!category) throw new Error(translate('API_INVALID_CATEGORY', loc()))
+    if (category.type !== input.type) throw new Error(translate('LOCAL_TYPE_CATEGORY_MISMATCH', loc()))
 
     const tx: Transaction = {
       id: newId('tx'),
@@ -364,16 +375,16 @@ export class LocalFinanceRepository implements FinanceRepository {
   async updateTransaction(id: string, input: AddTransactionInput): Promise<Transaction> {
     const data = await this.load()
     const existing = data.transactions.find((tx) => tx.id === id)
-    if (!existing) throw new Error('Transação não encontrada')
+    if (!existing) throw new Error(translate('API_TX_NOT_FOUND', loc()))
     const occurredOn = input.occurredOn.trim()
     assertTransactionDateIsValid(occurredOn)
     assertPositiveAmountCents(input.amountCents)
     if ((input.description?.trim().length ?? 0) > TRANSACTION_DESCRIPTION_MAX_LENGTH) {
-      throw new Error('Descrição deve ter no máximo 240 caracteres')
+      throw new Error(translate('ERR_DESC_MAX_240', loc()))
     }
     const category = data.categories.find((c) => c.id === input.categoryId)
-    if (!category) throw new Error('Categoria inválida')
-    if (category.type !== input.type) throw new Error('Tipo não corresponde à categoria')
+    if (!category) throw new Error(translate('API_INVALID_CATEGORY', loc()))
+    if (category.type !== input.type) throw new Error(translate('LOCAL_TYPE_CATEGORY_MISMATCH', loc()))
     const updated: Transaction = {
       ...existing,
       type: input.type,
@@ -396,13 +407,13 @@ export class LocalFinanceRepository implements FinanceRepository {
 
     const budgetMonth = input.month.trim()
     if (!isValidYearMonth(budgetMonth)) {
-      throw new Error('Mês inválido')
+      throw new Error(translate('LOCAL_MONTH_INVALID', loc()))
     }
     assertNonNegativeAmountCents(input.limitCents, 'Limite')
 
     const category = data.categories.find((c) => c.id === input.categoryId)
-    if (!category) throw new Error('Categoria inválida')
-    if (category.type !== 'DESPESA') throw new Error('Orçamento só para despesas')
+    if (!category) throw new Error(translate('API_INVALID_CATEGORY', loc()))
+    if (category.type !== 'DESPESA') throw new Error(translate('API_BUDGET_EXPENSE_ONLY', loc()))
 
     const limit = input.limitCents
     const existing = data.budgets.find((b) => b.month === budgetMonth && b.categoryId === input.categoryId)
@@ -449,7 +460,7 @@ export class LocalFinanceRepository implements FinanceRepository {
   async updateGoal(id: string, input: UpdateGoalInput): Promise<Goal> {
     const data = await this.load()
     const goal = data.goals.find((item) => item.id === id)
-    if (!goal) throw new Error('Meta não encontrada')
+    if (!goal) throw new Error(translate('API_GOAL_NOT_FOUND', loc()))
     assertGoalInputIsValid(input)
     const updated: Goal = {
       ...goal,
@@ -471,7 +482,7 @@ export class LocalFinanceRepository implements FinanceRepository {
   async addGoalContribution(id: string, input: AddGoalContributionInput): Promise<Goal> {
     const data = await this.load()
     const goal = data.goals.find((item) => item.id === id)
-    if (!goal) throw new Error('Meta não encontrada')
+    if (!goal) throw new Error(translate('API_GOAL_NOT_FOUND', loc()))
     assertContributionInputIsValid(goal, input)
     const contribution = {
       id: newId('goal_contribution'),

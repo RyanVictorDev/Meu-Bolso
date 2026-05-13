@@ -2,10 +2,12 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../services/useAuth'
 import { useTheme } from '../../theme/useTheme'
+import { useLocale } from '../../i18n/useLocale'
 
 export default function UserMenu() {
   const { user, logout } = useAuth()
   const { mode, setMode, accent, setAccent, resetAccent } = useTheme()
+  const { locale, setLocale, t } = useLocale()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -46,6 +48,26 @@ export default function UserMenu() {
 
       {open ? (
         <div className="userMenuPanel" id={panelId} role="menu" aria-label="Menu do usuário">
+          <p className="appearancePanelTitle">{t('UI_LANGUAGE')}</p>
+          <div className="appearanceRow">
+            <span className="appearanceLabel">PT / EN</span>
+            <div className="themeToggleGroup" role="group" aria-label={t('UI_LANGUAGE')}>
+              <button
+                type="button"
+                className={`themeToggleBtn ${locale === 'pt-BR' ? 'themeToggleBtnActive' : ''}`}
+                onClick={() => setLocale('pt-BR')}
+              >
+                PT
+              </button>
+              <button
+                type="button"
+                className={`themeToggleBtn ${locale === 'en' ? 'themeToggleBtnActive' : ''}`}
+                onClick={() => setLocale('en')}
+              >
+                EN
+              </button>
+            </div>
+          </div>
           <p className="appearancePanelTitle">Tema</p>
           <div className="appearanceRow">
             <span className="appearanceLabel">Modo</span>

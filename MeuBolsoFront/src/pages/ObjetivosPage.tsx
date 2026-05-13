@@ -21,6 +21,9 @@ import Modal from '../components/ui/Modal'
 import Snackbar from '../components/ui/Snackbar'
 import PageLoader from '../components/PageLoader'
 import type { SnackbarTone } from '../components/ui/Snackbar'
+import { useLocale } from '../i18n/useLocale'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate } from '../i18n/messages'
 
 const GOAL_NAME_MAX_LENGTH = 120
 const GOAL_DESCRIPTION_MAX_LENGTH = 280
@@ -35,6 +38,7 @@ function todayISO() {
 export default function ObjetivosPage() {
   const { loading, data, addGoal, updateGoal, deleteGoal, addGoalContribution } = useFinance()
   const { canEdit } = useEnvironment()
+  const { t } = useLocale()
   const [goalModal, setGoalModal] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [contributionGoal, setContributionGoal] = useState<Goal | null>(null)
@@ -85,16 +89,16 @@ export default function ObjetivosPage() {
     setError(null)
     try {
       const targetCents = parseAmountToCents(target)
-      if (!name.trim()) throw new Error('Informe um nome para a meta')
-      if (name.trim().length > GOAL_NAME_MAX_LENGTH) throw new Error('Nome da meta deve ter no máximo 120 caracteres')
+      if (!name.trim()) throw new Error(t('ERR_GOAL_NAME_REQUIRED'))
+      if (name.trim().length > GOAL_NAME_MAX_LENGTH) throw new Error(t('ERR_GOAL_NAME_MAX'))
       if (description.trim().length > GOAL_DESCRIPTION_MAX_LENGTH) {
-        throw new Error('Descrição deve ter no máximo 280 caracteres')
+        throw new Error(t('ERR_GOAL_DESC_MAX'))
       }
-      if (!targetCents) throw new Error('Informe um valor alvo válido')
-      if (targetCents > MAX_AMOUNT_CENTS) throw new Error('Valor alvo excede o limite permitido')
-      if (!dueOn) throw new Error('Informe o prazo da meta')
-      if (!isValidISODate(dueOn)) throw new Error('Prazo da meta inválido')
-      if (dueOn < today) throw new Error('O prazo da meta não pode ser no passado')
+      if (!targetCents) throw new Error(t('ERR_TARGET_REQUIRED'))
+      if (targetCents > MAX_AMOUNT_CENTS) throw new Error(t('ERR_TARGET_MAX'))
+      if (!dueOn) throw new Error(t('ERR_DUE_REQUIRED'))
+      if (!isValidISODate(dueOn)) throw new Error(t('ERR_DUE_INVALID'))
+      if (dueOn < today) throw new Error(t('ERR_DUE_PAST'))
       const payload = {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -110,7 +114,8 @@ export default function ObjetivosPage() {
       resetGoalForm()
       showSnackbar('success', editingGoal ? 'Meta atualizada com sucesso.' : 'Meta criada com sucesso.')
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Erro ao salvar objetivo'
+      const loc = getStoredLocale()
+      const message = e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_SAVE_GOAL', loc)
       setError(message)
       showSnackbar('error', message)
     }
@@ -121,16 +126,16 @@ export default function ObjetivosPage() {
     setError(null)
     try {
       const amountCents = parseAmountToCents(contributionAmount)
-      if (!amountCents) throw new Error('Informe um aporte válido')
-      if (amountCents > MAX_AMOUNT_CENTS) throw new Error('Aporte excede o limite permitido')
-      if (!contributionDate) throw new Error('Informe a data do aporte')
-      if (!isValidISODate(contributionDate)) throw new Error('Data do aporte inválida')
-      if (contributionDate > today) throw new Error('A data do aporte não pode ser no futuro')
+      if (!amountCents) throw new Error(t('ERR_CONTRIB_AMOUNT'))
+      if (amountCents > MAX_AMOUNT_CENTS) throw new Error(t('ERR_CONTRIB_MAX'))
+      if (!contributionDate) throw new Error(t('ERR_CONTRIB_DATE_REQUIRED'))
+      if (!isValidISODate(contributionDate)) throw new Error(t('ERR_CONTRIB_DATE_INVALID'))
+      if (contributionDate > today) throw new Error(t('API_CONTRIB_FUTURE'))
       if (contributionGoal.dueOn && contributionDate > contributionGoal.dueOn) {
-        throw new Error('A data do aporte não pode passar do prazo da meta')
+        throw new Error(t('API_CONTRIB_AFTER_DUE'))
       }
       if (contributionNote.trim().length > GOAL_CONTRIBUTION_NOTE_MAX_LENGTH) {
-        throw new Error('Observação deve ter no máximo 180 caracteres')
+        throw new Error(t('ERR_NOTE_MAX_180'))
       }
       await addGoalContribution(contributionGoal.id, {
         amountCents,
@@ -143,7 +148,8 @@ export default function ObjetivosPage() {
       setContributionNote('')
       showSnackbar('success', 'Aporte registrado com sucesso.')
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Erro ao registrar aporte'
+      const loc = getStoredLocale()
+      const message = e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_CONTRIBUTION', loc)
       setError(message)
       showSnackbar('error', message)
     }
@@ -159,7 +165,8 @@ export default function ObjetivosPage() {
       setDeleteCandidateId(null)
       showSnackbar('success', 'Meta excluída com sucesso.')
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : 'Erro ao excluir objetivo')
+      const loc = getStoredLocale()
+      setDeleteError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_DELETE_GOAL', loc))
     } finally {
       setDeleteLoading(false)
     }

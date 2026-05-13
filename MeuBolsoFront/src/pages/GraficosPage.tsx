@@ -6,6 +6,9 @@ import DateInput from '../components/ui/DateInput'
 import PillTabs from '../components/ui/PillTabs'
 import { formatBRDate, formatBRLFromCents } from '../domain/finance'
 import { useFinance } from '../services/useFinance'
+import { useLocale } from '../i18n/useLocale'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate } from '../i18n/messages'
 
 const TABS = [
   { value: 'resumo', label: 'Resumo' },
@@ -26,6 +29,7 @@ function currentMonthStartISO() {
 
 export default function GraficosPage() {
   const { loading, data, getTransactionSummary } = useFinance()
+  const { t } = useLocale()
   const [tab, setTab] = useState<(typeof TABS)[number]['value']>('resumo')
   const [dateFrom, setDateFrom] = useState(currentMonthStartISO)
   const [dateTo, setDateTo] = useState(todayISO)
@@ -38,7 +42,10 @@ export default function GraficosPage() {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [summaryError, setSummaryError] = useState<string | null>(null)
 
-  const periodError = dateFrom && dateTo && dateFrom > dateTo ? 'A data inicial não pode ser maior que a final.' : null
+  const periodError = useMemo(
+    () => (dateFrom && dateTo && dateFrom > dateTo ? t('ERR_DATE_FROM_AFTER_TO') : null),
+    [dateFrom, dateTo, t],
+  )
 
   useEffect(() => {
     if (loading || !data || periodError) return
@@ -48,7 +55,8 @@ export default function GraficosPage() {
       try {
         setSummary(await getTransactionSummary({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }))
       } catch (e) {
-        setSummaryError(e instanceof Error ? e.message : 'Não foi possível carregar o resumo')
+        const loc = getStoredLocale()
+        setSummaryError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_SUMMARY_LOAD', loc))
       } finally {
         setSummaryLoading(false)
       }

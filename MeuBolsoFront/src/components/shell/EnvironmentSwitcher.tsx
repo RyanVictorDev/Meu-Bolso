@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Environment, EnvironmentRole } from '../../domain/environment'
 import { useEnvironment } from '../../services/useEnvironment'
+import { useLocale } from '../../i18n/useLocale'
+import { getStoredLocale } from '../../i18n/localeStorage'
+import { localizeThrownErrorMessage, translate } from '../../i18n/messages'
 import Input from '../ui/Input'
 import Modal from '../ui/Modal'
 import Select from '../ui/Select'
@@ -157,6 +160,7 @@ export default function EnvironmentSwitcher() {
     updateMemberRole,
     removeMember,
   } = useEnvironment()
+  const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
@@ -195,19 +199,20 @@ export default function EnvironmentSwitcher() {
   const submitEnvironment = async () => {
     setError(null)
     try {
-      if (!newName.trim()) throw new Error('Informe um nome para o ambiente')
+      if (!newName.trim()) throw new Error(t('ERR_ENV_NAME'))
       if (newName.trim().length > ENVIRONMENT_NAME_MAX_LENGTH) {
-        throw new Error('Nome do ambiente deve ter no máximo 120 caracteres')
+        throw new Error(t('ERR_ENV_NAME_MAX'))
       }
       if (newDescription.trim().length > ENVIRONMENT_DESCRIPTION_MAX_LENGTH) {
-        throw new Error('Descrição deve ter no máximo 280 caracteres')
+        throw new Error(t('ERR_ENV_DESC_MAX'))
       }
       await createEnvironment({ name: newName.trim(), description: newDescription.trim() || undefined })
       setNewName('')
       setNewDescription('')
       setOpen(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao criar ambiente')
+      const loc = getStoredLocale()
+      setError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_ENV_CREATE', loc))
     }
   }
 
@@ -216,13 +221,14 @@ export default function EnvironmentSwitcher() {
     setError(null)
     try {
       const email = memberEmail.trim()
-      if (!EMAIL_PATTERN.test(email)) throw new Error('Informe um e-mail válido para compartilhar')
-      if (email.length > EMAIL_MAX_LENGTH) throw new Error('E-mail deve ter no máximo 180 caracteres')
+      if (!EMAIL_PATTERN.test(email)) throw new Error(t('ERR_SHARE_EMAIL_INVALID'))
+      if (email.length > EMAIL_MAX_LENGTH) throw new Error(t('ERR_SHARE_EMAIL_MAX'))
       await addMember(activeEnvironmentId, { email, role: memberRole })
       setMemberEmail('')
       setMemberRole('VIEWER')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao adicionar membro')
+      const loc = getStoredLocale()
+      setError(e instanceof Error ? localizeThrownErrorMessage(e.message, loc) : translate('ERR_SHARE_ADD', loc))
     }
   }
 

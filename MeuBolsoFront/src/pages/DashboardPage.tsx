@@ -6,6 +6,7 @@ import ReceitasDespesasChart from '../components/charts/ReceitasDespesasChart'
 import DespesasPorCategoriaDonutChart from '../components/charts/DespesasPorCategoriaDonutChart'
 import CategoryIcon from '../components/icons/CategoryIcon'
 import DashboardSkeleton from '../components/DashboardSkeleton'
+import Select from '../components/ui/Select'
 
 function previousMonthOf(month: string) {
   const [year, monthNumber] = month.split('-').map(Number)
@@ -125,13 +126,18 @@ export default function DashboardPage() {
         </div>
 
         <div className="monthSelectWrap">
-          <select className="monthSelect" value={activeMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+          <Select
+            className="monthSelectControl"
+            value={activeMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            aria-label="Mês de referência do dashboard"
+          >
             {monthOptions.map((m) => (
               <option value={m} key={m}>
                 {monthLabelFromYYYYMMUtil(m)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

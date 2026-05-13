@@ -1201,9 +1201,14 @@
     max-width: 100%;
   }
 
-  .pageHeaderRow .monthSelect {
+  .pageHeaderRow .monthSelectControl {
     width: 100%;
     max-width: 100%;
+  }
+
+  .pageHeaderRow .monthSelectControl .select {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -1212,38 +1217,31 @@
   align-items: center;
 }
 
-.monthSelect {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding: 10px 38px 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background-color: var(--surface-elevated);
-  color: var(--text-h);
-  font-weight: 600;
+/* Mês no dashboard: mesmo Select dos formulários, largura pelo conteúdo + menu alinhado */
+.monthSelectWrap .monthSelectControl {
+  width: max-content;
+  max-width: min(100%, 320px);
+}
+
+.monthSelectWrap .monthSelectControl .select {
+  width: max-content;
+  min-width: 0;
+  padding: 10px 12px;
   font-size: 13px;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-position: calc(100% - 12px) 50%;
-  background-size: 16px 16px;
-  background-repeat: no-repeat;
+  font-weight: 650;
+  border-radius: 14px;
 }
 
-.monthSelect:hover {
-  border-color: var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.monthSelectWrap .monthSelectControl .selectValue {
+  font-weight: 650;
 }
 
-.monthSelect:focus {
-  outline: none;
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px var(--accent-bg);
+.monthSelectWrap .monthSelectControl.selectControlOpen {
+  z-index: 85;
+}
+
+.monthSelectWrap .monthSelectControl .selectMenu {
+  min-width: 100%;
 }
 
 .statCard {
@@ -2408,23 +2406,18 @@
   z-index: 90;
 }
 
-.dateTrigger {
+.dateFieldShell {
   width: 100%;
   min-height: 42px;
-  padding: 11px 12px 11px 14px;
+  padding: 0 6px 0 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface-elevated);
   color: var(--text-h);
-  cursor: pointer;
   outline: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  text-align: left;
-  font-size: 14px;
-  font-weight: 650;
+  gap: 6px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   transition:
     border-color 0.15s ease,
@@ -2432,36 +2425,61 @@
     background 0.15s ease;
 }
 
-.dateTrigger:hover,
-.dateControlOpen .dateTrigger {
+.dateFieldShell:not(.dateFieldShellDisabled):hover,
+.dateControlOpen .dateFieldShell:not(.dateFieldShellDisabled) {
   border-color: var(--accent-border);
   box-shadow: 0 0 0 3px var(--accent-bg), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.dateTrigger:disabled {
+.dateFieldShell:not(.dateFieldShellDisabled):focus-within {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.dateFieldShellDisabled {
   cursor: not-allowed;
   opacity: 0.65;
   background: var(--surface-muted);
 }
 
-.dateTriggerValue,
-.dateTriggerPlaceholder {
+.dateTextInput {
+  flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 650;
+  font-family: inherit;
+  line-height: 1.25;
+  padding: 10px 0;
+  outline: none;
+  cursor: text;
 }
 
-.dateTriggerPlaceholder {
+.dateTextInput::placeholder {
   color: var(--input-placeholder);
+  font-weight: 550;
 }
 
-.dateTriggerIcon {
-  width: 22px;
-  height: 22px;
+.dateTextInput:disabled {
+  cursor: not-allowed;
+}
+
+.dateTextInputMasked {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+.dateCalendarBtn {
   flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 0;
   border-radius: 999px;
+  background: transparent;
   color: var(--muted);
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2470,10 +2488,15 @@
     color 0.15s ease;
 }
 
-.dateTrigger:hover .dateTriggerIcon,
-.dateControlOpen .dateTriggerIcon {
+.dateCalendarBtn:hover:not(:disabled),
+.dateControlOpen .dateCalendarBtn:not(:disabled) {
   background: var(--accent-bg);
   color: var(--accent);
+}
+
+.dateCalendarBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .dateMenu {
@@ -2755,7 +2778,8 @@
 .btn:focus-visible,
 .input:focus-visible,
 .select:focus-visible,
-.dateTrigger:focus-visible,
+.dateTextInput:focus-visible,
+.dateCalendarBtn:focus-visible,
 .dateDay:focus-visible,
 .dateNavBtn:focus-visible,
 .dateFooterBtn:focus-visible {
@@ -3000,10 +3024,25 @@
 
 .authTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.authTopControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.authLangToggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-elevated);
 }
 
 .authBadge {

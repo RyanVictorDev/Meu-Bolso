@@ -1,5 +1,7 @@
 import { clearSession, readSession, writeSession } from './authStorage'
 import type { AuthResponse } from './authTypes'
+import { getStoredLocale } from '../i18n/localeStorage'
+import { findMessageKeyFromLocalizedText, localizeApiError, translate } from '../i18n/messages'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:2030'
 
@@ -27,7 +29,7 @@ async function refreshSession(): Promise<void> {
     const session = readSession()
     if (!session?.refreshToken) {
       notifySessionExpired()
-      throw new ApiError(401, 'Sessão expirada')
+      throw new ApiError(401, translate('ERR_SESSION_EXPIRED', getStoredLocale()))
     }
     const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
@@ -36,7 +38,7 @@ async function refreshSession(): Promise<void> {
     })
     if (!res.ok) {
       notifySessionExpired()
-      throw new ApiError(401, 'Sessão expirada')
+      throw new ApiError(401, translate('ERR_SESSION_EXPIRED', getStoredLocale()))
     }
     const payload = (await res.json()) as AuthResponse
     writeSession({
@@ -82,7 +84,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   if (!response.ok) {
-    let message = 'Erro inesperado'
+    const locale = getStoredLocale()
+    let message = translate('ERR_UNEXPECTED', locale)
     let fields: Record<string, string> = {}
     try {
       const payload = (await response.json()) as { message?: string; fields?: Record<string, string> }
@@ -91,7 +94,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     } catch {
       // no-op
     }
-    throw new ApiError(response.status, message, fields)
+    const localizedMessage = localizeApiError(response.status, message, locale)
+    const localizedFields: Record<string, string> = {}
+    for (const [k, v] of Object.entries(fields)) {
+      const fk = findMessageKeyFromLocalizedText(v)
+      localizedFields[k] = fk ? translate(fk, locale) : v
+    }
+    throw new ApiError(response.status, localizedMessage, localizedFields)
   }
 
   if (response.status === 204 || response.status === 205) {
@@ -106,7 +115,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   try {
     return JSON.parse(raw) as T
   } catch {
-    throw new ApiError(response.status, 'Resposta inválida do servidor')
+    throw new ApiError(response.status, translate('ERR_INVALID_RESPONSE', getStoredLocale()))
   }
 }
 

@@ -21,6 +21,8 @@ export default function Select({
   required,
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
 }: SelectHTMLAttributes<HTMLSelectElement>) {
   const id = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -106,6 +108,8 @@ export default function Select({
         aria-required={required}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         aria-haspopup="listbox"
