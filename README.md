@@ -1,129 +1,170 @@
-# MeuBolso - Front + Backend
+<div align="center">
 
-Aplicacao de controle financeiro pessoal com frontend React e backend Spring Boot com autenticacao JWT.
+# Meu Bolso
 
-## Estrutura
+**Controle financeiro pessoal** — dashboard, transações, categorias, orçamentos e metas, com API própria e autenticação JWT.
 
-- `MeuBolsoFront/`: frontend React + Vite
-- `back/`: backend Spring Boot + PostgreSQL + Flyway
+[![Stack](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Stack](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Stack](https://img.shields.io/badge/Spring%20Boot-Java-6DB33F?logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Stack](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
-## Requisitos
+</div>
 
-- Node.js 20+
-- Java 17+
-- Maven Wrapper (`mvnw`) ja incluso
-- PostgreSQL 14+
+---
 
-## Backend (Spring Boot)
+## Visão geral
 
-Diretorio:
+O repositório é um **monorepo** com SPA responsiva e backend RESTful: o frontend consome a API em tempo real (com fallback local onde aplicável), sessões via **access + refresh tokens**, e migrações de base de dados com **Flyway**.
+
+| Pasta | Descrição |
+|--------|------------|
+| [`MeuBolsoFront/`](MeuBolsoFront/) | Interface **React + Vite + TypeScript**, roteamento com React Router. |
+| [`back/`](back/) | API **Spring Boot**, persistência **PostgreSQL**, migrações **Flyway**. |
+
+---
+
+## Funcionalidades (alto nível)
+
+- Autenticação: registo, login, refresh e rotas protegidas no cliente.
+- Finanças: dashboard, **transações**, **categorias**, **orçamentos**, objetivos e operações de reset por utilizador.
+- Documentação interativa da API em **Swagger / OpenAPI**.
+- **Docker Compose** para subir frontend, backend e base de dados com um comando.
+
+---
+
+## Pré-requisitos
+
+| Ferramenta | Versão sugerida |
+|-------------|-----------------|
+| **Node.js** | 20+ |
+| **Java** | 17+ |
+| **PostgreSQL** | 14+ |
+| **Maven** | *incluído* (`back/mvnw` ou `mvnw.cmd` no Windows) |
+
+---
+
+## Início rápido (desenvolvimento local)
+
+### 1. Base de dados
+
+Crie a base `meubolso` no PostgreSQL e anote utilizador e palavra-passe (os defaults abaixo assumem `postgres` / `postgres`).
+
+### 2. Backend
 
 ```bash
 cd back
 ```
 
-Variaveis de ambiente principais:
-
-- `SERVER_PORT` (default `2030`)
-- `DB_URL` (default `jdbc:postgresql://localhost:5432/meubolso`)
-- `DB_USER` (default `postgres`)
-- `DB_PASSWORD` (default `postgres`)
-- `JWT_SECRET` (obrigatorio, minimo 64 caracteres)
-- `JWT_ACCESS_MINUTES` (default `30`)
-- `JWT_REFRESH_DAYS` (default `14`)
-- `CORS_ALLOWED_ORIGINS` (default `http://localhost:5173`)
-- `APP_SEED_ADMIN_ENABLED` (default `false`)
-- `APP_SEED_ADMIN_NAME` (usado somente se o seed admin estiver habilitado)
-- `APP_SEED_ADMIN_EMAIL` (usado somente se o seed admin estiver habilitado)
-- `APP_SEED_ADMIN_PASSWORD` (usado somente se o seed admin estiver habilitado)
-
-Executar:
+Defina pelo menos **`JWT_SECRET`** (mínimo **64 caracteres**). Exemplo (Unix):
 
 ```bash
-JWT_SECRET=troque-por-um-segredo-aleatorio-com-pelo-menos-64-caracteres ./mvnw spring-boot:run
+export JWT_SECRET="substitua-por-um-segredo-aleatorio-com-pelo-menos-64-caracteres-obrigatorio"
+./mvnw spring-boot:run
 ```
 
-Swagger/OpenAPI:
+No **Windows (PowerShell)**:
 
-- `http://localhost:2030/swagger-ui/index.html`
+```powershell
+cd back
+$env:JWT_SECRET="substitua-por-um-segredo-aleatorio-com-pelo-menos-64-caracteres-obrigatorio"
+.\mvnw.cmd spring-boot:run
+```
 
-## Frontend (React)
+- **API:** `http://localhost:2030` (porta configurável)
+- **Swagger UI:** `http://localhost:2030/swagger-ui/index.html`
 
-Diretorio:
+### 3. Frontend
 
 ```bash
 cd MeuBolsoFront
-```
-
-Variavel opcional:
-
-- `VITE_API_URL` (default `http://localhost:2030`)
-
-Executar:
-
-```bash
 npm install
 npm run dev
 ```
 
-**Atualizar a página (F5) em rotas como `/transacoes`:** com `npm run dev`, o Vite já trata SPA. Se você usa o **frontend no Docker (Nginx)**, o fallback para `index.html` está em `MeuBolsoFront/nginx.conf` (evita 404 ao dar refresh em rota interna).
+- **App:** `http://localhost:5173`
+- Opcional: `VITE_API_URL` — por omissão `http://localhost:2030`
 
-## Fluxo implementado
+> **Refresh (F5) em rotas internas:** com `npm run dev`, o Vite trata o SPA. Em **Nginx** (ex.: imagem Docker), o fallback para `index.html` está em [`MeuBolsoFront/nginx.conf`](MeuBolsoFront/nginx.conf).
 
-- Login e cadastro com JWT (`/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`)
-- Rotas privadas no frontend com redirecionamento para `/login`
-- Dashboard, categorias, transacoes e orcamentos consumindo API real
-- Reset de dados por usuario (`POST /api/finance/reset`)
-- Seed opcional de admin via `APP_SEED_ADMIN_ENABLED=true`
+---
+
+## Variáveis de ambiente — backend
+
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `JWT_SECRET` | **Sim** | Segredo HMAC; **≥ 64 caracteres**. |
+| `SERVER_PORT` | Não | Porta HTTP (default `2030`). |
+| `DB_URL` | Não | JDBC URL (default `jdbc:postgresql://localhost:5432/meubolso`). |
+| `DB_USER` / `DB_PASSWORD` | Não | Credenciais PostgreSQL. |
+| `JWT_ACCESS_MINUTES` | Não | Validade do access token (default `30`). |
+| `JWT_REFRESH_DAYS` | Não | Validade do refresh token (default `14`). |
+| `CORS_ALLOWED_ORIGINS` | Não | Origens permitidas (default `http://localhost:5173`). |
+| `APP_SEED_ADMIN_*` | Não | Seed de administrador; só usado se `APP_SEED_ADMIN_ENABLED=true`. |
+
+---
 
 ## Docker Compose (stack completa)
 
-Arquivos adicionados:
-
-- `docker-compose.yml` (root)
-- `.env.example` (root)
-- `back/Dockerfile`
-- `MeuBolsoFront/Dockerfile`
-
-Passos:
+Ficheiros de referência: [`docker-compose.yml`](docker-compose.yml), [`.env.example`](.env.example), [`back/Dockerfile`](back/Dockerfile), [`MeuBolsoFront/Dockerfile`](MeuBolsoFront/Dockerfile).
 
 ```bash
 cp .env.example .env
-# Edite JWT_SECRET, senhas e demais valores sensiveis antes de subir.
+# Edite JWT_SECRET, palavras-passe e URLs antes de produção.
 docker compose up -d --build
 ```
 
-Acessos:
+| Serviço | URL típica |
+|---------|------------|
+| Frontend | `http://localhost:5173` |
+| API | `http://localhost:2030` |
+| Swagger | `http://localhost:2030/swagger-ui/index.html` |
 
-- Frontend: `http://localhost:5173`
-- Backend (API): `http://localhost:2030`
-- Swagger: `http://localhost:2030/swagger-ui/index.html`
-
-Parar stack:
+Parar:
 
 ```bash
 docker compose down
 ```
 
-Parar e remover volume do Postgres:
+Remover também o volume da base de dados:
 
 ```bash
 docker compose down -v
 ```
 
-## Testes
+---
 
-Backend:
+## Testes e verificação
+
+**Backend**
 
 ```bash
 cd back
 ./mvnw test
 ```
 
-Frontend:
+**Frontend**
 
 ```bash
 cd MeuBolsoFront
 npm run lint
 npm run build
 ```
+
+---
+
+## Fluxo de API (resumo)
+
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`
+- Rotas financeiras sob `/api/...` (consumidas pelo dashboard, categorias, transações, orçamentos, etc.)
+- `POST /api/finance/reset` — repor dados do utilizador autenticado
+
+Detalhe dos contratos: **Swagger** na instância em execução.
+
+---
+
+<div align="center">
+
+**Meu Bolso** — organização financeira com stack moderna e deploy reproduzível.
+
+</div>
