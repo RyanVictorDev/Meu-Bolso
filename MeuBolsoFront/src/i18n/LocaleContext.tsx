@@ -1,15 +1,8 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { LocaleContext } from './localeContext'
 import type { AppLocale } from './localeStorage'
 import { getStoredLocale, setStoredLocale } from './localeStorage'
 import { translate, type MessageKey } from './messages'
-
-export type LocaleContextValue = {
-  locale: AppLocale
-  setLocale: (next: AppLocale) => void
-  t: (key: MessageKey) => string
-}
-
-export const LocaleContext = createContext<LocaleContextValue | null>(null)
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<AppLocale>(() => getStoredLocale())
