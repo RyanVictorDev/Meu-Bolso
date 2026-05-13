@@ -1,6 +1,6 @@
 package com.meubolso.v1.auth;
 
-import com.meubolso.v1.user.UserAccount;
+import com.meubolso.v1.user.entity.UserAccount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

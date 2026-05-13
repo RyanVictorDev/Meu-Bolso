@@ -11,6 +11,7 @@ import type {
   TransactionPage,
   TransactionSummary,
   TransactionSummaryInput,
+  UpdateCategoryInput,
   UpdateGoalInput,
 } from './financeRepository'
 
@@ -61,6 +62,19 @@ export class HttpFinanceRepository implements FinanceRepository {
     return apiRequest<Category>(withEnvironment('/api/categories', environmentId), {
       method: 'POST',
       body: input,
+    })
+  }
+
+  async updateCategory(id: string, input: UpdateCategoryInput, environmentId?: string | null): Promise<Category> {
+    return apiRequest<Category>(withEnvironment(`/api/categories/${encodeURIComponent(id)}`, environmentId), {
+      method: 'PUT',
+      body: input,
+    })
+  }
+
+  async deleteCategory(id: string, environmentId?: string | null): Promise<void> {
+    await apiRequest<void>(withEnvironment(`/api/categories/${encodeURIComponent(id)}`, environmentId), {
+      method: 'DELETE',
     })
   }
 

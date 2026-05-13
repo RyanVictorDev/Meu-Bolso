@@ -13,11 +13,14 @@ import { useEnvironment } from '../services/useEnvironment'
 import { useFinance } from '../services/useFinance'
 import ActionIconButton from '../components/ui/ActionIconButton'
 import Button from '../components/ui/Button'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import DateInput from '../components/ui/DateInput'
 import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
+import Snackbar from '../components/ui/Snackbar'
 import PageLoader from '../components/PageLoader'
+import type { SnackbarTone } from '../components/ui/Snackbar'
 
 const GOAL_NAME_MAX_LENGTH = 120
 const GOAL_DESCRIPTION_MAX_LENGTH = 280
@@ -42,7 +45,15 @@ export default function ObjetivosPage() {
   const [contributionAmount, setContributionAmount] = useState('')
   const [contributionDate, setContributionDate] = useState(todayISO())
   const [contributionNote, setContributionNote] = useState('')
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [snackbar, setSnackbar] = useState<{ tone: SnackbarTone; message: string } | null>(null)
+
+  const showSnackbar = (tone: SnackbarTone, message: string) => {
+    setSnackbar({ tone, message })
+  }
 
   const today = useMemo(() => todayISO(), [])
   const goals = useMemo(() => data?.goals.filter((goal) => !goal.archived) ?? [], [data])
@@ -97,8 +108,11 @@ export default function ObjetivosPage() {
       }
       setGoalModal(false)
       resetGoalForm()
+      showSnackbar('success', editingGoal ? 'Meta atualizada com sucesso.' : 'Meta criada com sucesso.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao salvar objetivo')
+      const message = e instanceof Error ? e.message : 'Erro ao salvar objetivo'
+      setError(message)
+      showSnackbar('error', message)
     }
   }
 
@@ -127,14 +141,28 @@ export default function ObjetivosPage() {
       setContributionAmount('')
       setContributionDate(todayISO())
       setContributionNote('')
+      showSnackbar('success', 'Aporte registrado com sucesso.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao registrar aporte')
+      const message = e instanceof Error ? e.message : 'Erro ao registrar aporte'
+      setError(message)
+      showSnackbar('error', message)
     }
   }
 
-  const confirmDeleteGoal = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir esta meta e seus aportes? Esta ação não pode ser desfeita.')) return
-    await deleteGoal(id)
+  const confirmDeleteGoal = async () => {
+    if (!deleteCandidateId || deleteLoading) return
+    const deletedId = deleteCandidateId
+    setDeleteLoading(true)
+    setDeleteError(null)
+    try {
+      await deleteGoal(deletedId)
+      setDeleteCandidateId(null)
+      showSnackbar('success', 'Meta excluída com sucesso.')
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Erro ao excluir objetivo')
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   if (loading || !data) {
@@ -190,7 +218,14 @@ export default function ObjetivosPage() {
                   {canEdit ? (
                     <>
                       <ActionIconButton action="edit" onClick={() => openGoalForm(goal)} aria-label="Editar meta" />
-                      <ActionIconButton action="delete" onClick={() => void confirmDeleteGoal(goal.id)} aria-label="Excluir meta" />
+                      <ActionIconButton
+                        action="delete"
+                        onClick={() => {
+                          setDeleteError(null)
+                          setDeleteCandidateId(goal.id)
+                        }}
+                        aria-label="Excluir meta"
+                      />
                     </>
                   ) : null}
                 </div>
@@ -307,6 +342,23 @@ export default function ObjetivosPage() {
           </div>
         </Modal>
       ) : null}
+
+      {deleteCandidateId ? (
+        <ConfirmDialog
+          title="Excluir meta?"
+          description="Esta meta e todos os seus aportes serão removidos definitivamente. Essa ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          loading={deleteLoading}
+          errorMessage={deleteError}
+          onCancel={() => {
+            setDeleteError(null)
+            setDeleteCandidateId(null)
+          }}
+          onConfirm={() => void confirmDeleteGoal()}
+        />
+      ) : null}
+
+      {snackbar ? <Snackbar tone={snackbar.tone} message={snackbar.message} onClose={() => setSnackbar(null)} /> : null}
     </>
   )
 }

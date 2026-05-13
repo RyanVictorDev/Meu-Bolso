@@ -2,7 +2,7 @@ package com.meubolso.v1.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.meubolso.v1.common.ApiErrorResponse;
+import com.meubolso.v1.common.exceptions.ApiErrorResponse;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

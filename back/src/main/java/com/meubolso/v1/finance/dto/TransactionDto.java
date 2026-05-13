@@ -1,6 +1,6 @@
 package com.meubolso.v1.finance.dto;
 
-import com.meubolso.v1.finance.TransactionType;
+import com.meubolso.v1.finance.enums.TransactionType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;

@@ -12,6 +12,7 @@ import type {
   TransactionPage,
   TransactionSummary,
   TransactionSummaryInput,
+  UpdateCategoryInput,
   UpdateGoalInput,
 } from './financeRepository'
 
@@ -43,6 +44,13 @@ function newId(prefix: string) {
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
 }
 
 function assertPositiveAmountCents(value: number, field = 'Valor') {
@@ -180,7 +188,8 @@ export class LocalFinanceRepository implements FinanceRepository {
     return seed
   }
 
-  async addCategory(input: AddCategoryInput): Promise<Category> {
+  async addCategory(input: AddCategoryInput, _environmentId?: string | null): Promise<Category> {
+    void _environmentId
     const data = await this.load()
 
     if (!isCategoryType(input.type)) {
@@ -227,13 +236,59 @@ export class LocalFinanceRepository implements FinanceRepository {
     return category
   }
 
+  async updateCategory(id: string, input: UpdateCategoryInput, _environmentId?: string | null): Promise<Category> {
+    void _environmentId
+    const data = await this.load()
+    const idx = data.categories.findIndex((c) => c.id === id)
+    if (idx < 0) throw new Error('Categoria não encontrada')
+    const categoryName = input.name.trim()
+    if (categoryName.length < 2 || categoryName.length > CATEGORY_NAME_MAX_LENGTH) {
+      throw new Error('Nome da categoria deve ter entre 2 e 80 caracteres')
+    }
+    const current = data.categories[idx]
+    const duplicate = data.categories.find(
+      (c) => c.id !== id && c.name.toLowerCase() === categoryName.toLowerCase() && c.type === current.type,
+    )
+    if (duplicate) throw new Error('Já existe uma categoria com este nome')
+    const emojiTrim = input.emoji?.trim()
+    if ((emojiTrim?.length ?? 0) > CATEGORY_EMOJI_MAX_LENGTH) {
+      throw new Error('Ícone deve ter no máximo 16 caracteres')
+    }
+    const updated: Category = { ...current, name: categoryName }
+    if (emojiTrim) {
+      updated.emoji = emojiTrim
+    } else {
+      delete updated.emoji
+    }
+    const categories = [...data.categories]
+    categories[idx] = updated
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, categories }))
+    return updated
+  }
+
+  async deleteCategory(id: string, _environmentId?: string | null): Promise<void> {
+    void _environmentId
+    const data = await this.load()
+    if (!data.categories.some((c) => c.id === id)) throw new Error('Categoria não encontrada')
+    const txCount = data.transactions.filter((t) => t.categoryId === id).length
+    if (txCount > 0) {
+      throw new Error('Não é possível excluir: existem transações nesta categoria.')
+    }
+    const next: FinanceData = {
+      ...data,
+      categories: data.categories.filter((c) => c.id !== id),
+      budgets: data.budgets.filter((b) => b.categoryId !== id),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  }
+
   async listTransactions(input: ListTransactionsInput): Promise<TransactionPage> {
     const data = await this.load()
     const page = Math.max(0, input.page ?? 0)
     const size = Math.min(Math.max(1, input.size ?? 20), 100)
     const start = input.month ? `${input.month}-01` : input.dateFrom
     const end = input.month ? `${input.month}-31` : input.dateTo
-    const search = input.search?.trim().toLowerCase()
+    const search = input.search?.trim() ? normalizeSearchText(input.search) : undefined
     const filtered = data.transactions
       .filter((tx) => {
         if (start && tx.occurredOn < start) return false
@@ -241,7 +296,7 @@ export class LocalFinanceRepository implements FinanceRepository {
         if (search) {
           const category = data.categories.find((item) => item.id === tx.categoryId)
           const amount = (tx.amountCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-          const haystack = [tx.description, category?.name, tx.createdBy?.name, tx.createdBy?.email, amount].filter(Boolean).join(' ').toLowerCase()
+          const haystack = normalizeSearchText([tx.description, category?.name, tx.createdBy?.name, tx.createdBy?.email, amount].filter(Boolean).join(' '))
           if (!haystack.includes(search)) return false
         }
         return true

@@ -10,6 +10,7 @@ import type {
   TransactionPage,
   TransactionSummary,
   TransactionSummaryInput,
+  UpdateCategoryInput,
   UpdateGoalInput,
 } from './financeRepository'
 
@@ -17,8 +18,10 @@ export type FinanceContextValue = {
   loading: boolean
   data: FinanceData | null
   error: string | null
-  refresh: () => Promise<void>
+  refresh: (options?: { silent?: boolean }) => Promise<void>
   addCategory: (input: AddCategoryInput) => Promise<Category>
+  updateCategory: (id: string, input: UpdateCategoryInput) => Promise<Category>
+  deleteCategory: (id: string) => Promise<void>
   listTransactions: (input: ListTransactionsInput) => Promise<TransactionPage>
   getTransactionSummary: (input: TransactionSummaryInput) => Promise<TransactionSummary>
   addTransaction: (input: AddTransactionInput) => Promise<Transaction>

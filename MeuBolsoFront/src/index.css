@@ -44,8 +44,9 @@
   --sidebar-active-border: color-mix(in srgb, var(--accent) 32%, transparent);
   --sidebar-active-icon: var(--accent);
 
-  --topbar-bg: rgba(245, 246, 248, 0.78);
-  --topbar-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 8px 22px rgba(0, 0, 0, 0.05);
+  --topbar-bg: rgba(245, 246, 248, 0.72);
+  /* Só linha de separação — sombra vertical larga parecia degradê sob a topbar */
+  --topbar-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 
   --chart-grid: rgba(0, 0, 0, 0.1);
   --chart-label: rgba(0, 0, 0, 0.55);
@@ -116,8 +117,8 @@
   --sidebar-active-border: rgba(255, 255, 255, 0.14);
   --sidebar-active-icon: var(--accent);
 
-  --topbar-bg: rgba(12, 16, 20, 0.82);
-  --topbar-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --topbar-bg: rgba(12, 16, 20, 0.68);
+  --topbar-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
 
   --chart-grid: rgba(255, 255, 255, 0.12);
   --chart-label: rgba(255, 255, 255, 0.55);
@@ -169,4 +170,5 @@ a {
 
 #root {
   min-height: 100svh;
+  min-width: 0;
 }

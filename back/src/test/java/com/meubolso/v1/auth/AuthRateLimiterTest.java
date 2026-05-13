@@ -1,6 +1,6 @@
 package com.meubolso.v1.auth;
 
-import com.meubolso.v1.common.ApiException;
+import com.meubolso.v1.common.exceptions.ApiException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;

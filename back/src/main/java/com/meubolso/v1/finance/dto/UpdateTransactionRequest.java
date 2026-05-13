@@ -1,6 +1,6 @@
 package com.meubolso.v1.finance.dto;
 
-import com.meubolso.v1.finance.TransactionType;
+import com.meubolso.v1.finance.enums.TransactionType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

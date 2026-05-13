@@ -6,6 +6,11 @@ export interface AddCategoryInput {
   emoji?: string
 }
 
+export interface UpdateCategoryInput {
+  name: string
+  emoji?: string
+}
+
 export interface AddTransactionInput {
   type: TransactionType
   categoryId: string
@@ -72,6 +77,8 @@ export interface FinanceRepository {
   resetToSeed(environmentId?: string | null): Promise<FinanceData>
 
   addCategory(input: AddCategoryInput, environmentId?: string | null): Promise<Category>
+  updateCategory(id: string, input: UpdateCategoryInput, environmentId?: string | null): Promise<Category>
+  deleteCategory(id: string, environmentId?: string | null): Promise<void>
   listTransactions(input: ListTransactionsInput, environmentId?: string | null): Promise<TransactionPage>
   getTransactionSummary(input: TransactionSummaryInput, environmentId?: string | null): Promise<TransactionSummary>
   addTransaction(input: AddTransactionInput, environmentId?: string | null): Promise<Transaction>

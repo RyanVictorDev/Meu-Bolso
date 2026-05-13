@@ -1,6 +1,6 @@
 package com.meubolso.v1.environment.dto;
 
-import com.meubolso.v1.environment.EnvironmentRole;
+import com.meubolso.v1.environment.enums.EnvironmentRole;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;

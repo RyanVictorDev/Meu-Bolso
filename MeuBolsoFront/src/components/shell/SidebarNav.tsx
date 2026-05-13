@@ -14,7 +14,17 @@ function NavItem({ to, label, icon, end }: { to: string; label: string; icon: Re
   )
 }
 
-export default function SidebarNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export default function SidebarNav({
+  collapsed,
+  onToggle,
+  drawerCloseMode,
+}: {
+  collapsed: boolean
+  onToggle: () => void
+  /** When true, toggle closes the mobile drawer (sidebar always shown expanded). */
+  drawerCloseMode?: boolean
+}) {
+  const closeDrawer = Boolean(drawerCloseMode)
   return (
     <>
       <div className="sidebarMenuTitle">Menu</div>
@@ -24,13 +34,13 @@ export default function SidebarNav({ collapsed, onToggle }: { collapsed: boolean
             <button
               type="button"
               className="sidebarItem sidebarToggleBtn"
-              aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+              aria-label={closeDrawer ? 'Fechar menu' : collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
               onClick={onToggle}
             >
               <span className="sidebarIcon">
-                <HamburgerIcon open={!collapsed} />
+                <HamburgerIcon open={closeDrawer ? true : !collapsed} />
               </span>
-              <span className="sidebarLabel">Menu</span>
+              <span className="sidebarLabel">{closeDrawer ? 'Fechar' : 'Menu'}</span>
             </button>
           </li>
           <NavItem to="/" end label="Dashboard" icon={<IconDashboard />} />

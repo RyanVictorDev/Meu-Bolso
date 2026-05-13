@@ -94,10 +94,20 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiError(response.status, message, fields)
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 205) {
     return undefined as T
   }
-  return (await response.json()) as T
+
+  const raw = await response.text()
+  if (!raw.trim()) {
+    return undefined as T
+  }
+
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    throw new ApiError(response.status, 'Resposta inválida do servidor')
+  }
 }
 
 export { API_BASE_URL }

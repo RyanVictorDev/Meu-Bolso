@@ -1,14 +1,14 @@
 package com.meubolso.v1.auth;
 
+import com.meubolso.v1.user.repository.UserAccountRepository;
 import com.meubolso.v1.auth.dto.AuthResponse;
 import com.meubolso.v1.auth.dto.LoginRequest;
 import com.meubolso.v1.auth.dto.RefreshRequest;
 import com.meubolso.v1.auth.dto.RegisterRequest;
-import com.meubolso.v1.common.ApiException;
+import com.meubolso.v1.common.exceptions.ApiException;
 import com.meubolso.v1.config.SecurityProperties;
-import com.meubolso.v1.environment.EnvironmentService;
-import com.meubolso.v1.user.UserAccount;
-import com.meubolso.v1.user.UserAccountRepository;
+import com.meubolso.v1.environment.service.EnvironmentService;
+import com.meubolso.v1.user.entity.UserAccount;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

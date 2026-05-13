@@ -14,9 +14,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const repository: FinanceRepository = useMemo(() => new HttpFinanceRepository(), [])
 
-  const refresh = async () => {
+  const refresh = async (options?: { silent?: boolean }) => {
     if (environmentsLoading) return
-    setLoading(true)
+    const silent = options?.silent === true
+    if (!silent) setLoading(true)
     try {
       const next = await repository.load(activeEnvironmentId)
       setData(next)
@@ -32,7 +33,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         },
       )
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -49,51 +50,60 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       refresh,
       addCategory: async (input) => {
         const created = await repository.addCategory(input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return created
+      },
+      updateCategory: async (id, input) => {
+        const updated = await repository.updateCategory(id, input, activeEnvironmentId)
+        await refresh({ silent: true })
+        return updated
+      },
+      deleteCategory: async (id) => {
+        await repository.deleteCategory(id, activeEnvironmentId)
+        await refresh({ silent: true })
       },
       listTransactions: (input) => repository.listTransactions(input, activeEnvironmentId),
       getTransactionSummary: (input) => repository.getTransactionSummary(input, activeEnvironmentId),
       addTransaction: async (input) => {
         const created = await repository.addTransaction(input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return created
       },
       updateTransaction: async (id, input) => {
         const updated = await repository.updateTransaction(id, input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return updated
       },
       deleteTransaction: async (id) => {
         await repository.deleteTransaction(id, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
       },
       setBudgetLimit: async (input) => {
         const updated = await repository.setBudgetLimit(input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return updated
       },
       resetToSeed: async () => {
         await repository.resetToSeed(activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
       },
       addGoal: async (input) => {
         const created = await repository.addGoal(input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return created
       },
       updateGoal: async (id, input) => {
         const updated = await repository.updateGoal(id, input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return updated
       },
       deleteGoal: async (id) => {
         await repository.deleteGoal(id, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
       },
       addGoalContribution: async (id, input) => {
         const updated = await repository.addGoalContribution(id, input, activeEnvironmentId)
-        await refresh()
+        await refresh({ silent: true })
         return updated
       },
     }),

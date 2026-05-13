@@ -1,9 +1,9 @@
 package com.meubolso.v1.config;
 
-import com.meubolso.v1.environment.EnvironmentMemberRepository;
-import com.meubolso.v1.environment.EnvironmentService;
-import com.meubolso.v1.user.UserAccount;
-import com.meubolso.v1.user.UserAccountRepository;
+import com.meubolso.v1.user.repository.UserAccountRepository;
+import com.meubolso.v1.environment.repository.EnvironmentMemberRepository;
+import com.meubolso.v1.environment.service.EnvironmentService;
+import com.meubolso.v1.user.entity.UserAccount;
 import java.time.Clock;
 import java.util.Locale;
 import java.util.UUID;

@@ -13,15 +13,19 @@ import { useFinance } from '../services/useFinance'
 import { useEnvironment } from '../services/useEnvironment'
 import Button from '../components/ui/Button'
 import ActionIconButton from '../components/ui/ActionIconButton'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import DateInput from '../components/ui/DateInput'
 import EmptyState from '../components/ui/EmptyState'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import Select from '../components/ui/Select'
+import Snackbar from '../components/ui/Snackbar'
 import PageLoader from '../components/PageLoader'
+import type { SnackbarTone } from '../components/ui/Snackbar'
 
 const TRANSACTION_DESCRIPTION_MAX_LENGTH = 240
 const PAGE_SIZE = 20
+const SEARCH_DEBOUNCE_MS = 1000
 
 function todayISO() {
   const d = new Date()
@@ -41,9 +45,13 @@ export default function TransacoesPage() {
   const [open, setOpen] = useState(false)
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [dateFrom, setDateFrom] = useState(currentMonthStart)
   const [dateTo, setDateTo] = useState(todayISO())
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(0)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [totalElements, setTotalElements] = useState(0)
@@ -57,21 +65,26 @@ export default function TransacoesPage() {
   const [amount, setAmount] = useState('')
   const [occurredOn, setOccurredOn] = useState(todayISO())
   const [error, setError] = useState<string | null>(null)
+  const [snackbar, setSnackbar] = useState<{ tone: SnackbarTone; message: string } | null>(null)
+
+  const showSnackbar = (tone: SnackbarTone, message: string) => {
+    setSnackbar({ tone, message })
+  }
 
   const categoriesForType = useMemo(() => {
     if (!data) return []
     return data.categories.filter((c) => c.type === type).sort((a, b) => a.name.localeCompare(b.name))
   }, [data, type])
 
-  const loadTransactions = async (nextPage = page) => {
-    if (loading || !data || periodError) return
+  const loadTransactions = async (nextPage = page, options?: { ignoreGlobalLoading?: boolean }) => {
+    if ((!options?.ignoreGlobalLoading && loading) || !data || periodError) return
     setTransactionsLoading(true)
     setTransactionsError(null)
     try {
       const result = await listTransactions({
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         page: nextPage,
         size: PAGE_SIZE,
       })
@@ -91,12 +104,20 @@ export default function TransacoesPage() {
 
   useEffect(() => {
     setPage(0)
-  }, [dateFrom, dateTo, search, activeEnvironmentId])
+  }, [dateFrom, dateTo, debouncedSearch, activeEnvironmentId])
 
   useEffect(() => {
     void loadTransactions(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, dateFrom, dateTo, search, activeEnvironmentId, loading, data])
+  }, [page, dateFrom, dateTo, debouncedSearch, activeEnvironmentId, loading, data])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [search])
 
   useEffect(() => {
     if (!open) return
@@ -174,6 +195,7 @@ export default function TransacoesPage() {
         occurredOn,
       }
 
+      const wasEditing = Boolean(editingId)
       if (editingId) {
         await updateTransaction(editingId, payload)
       } else {
@@ -182,17 +204,33 @@ export default function TransacoesPage() {
 
       setOpen(false)
       resetForm()
-      await loadTransactions(0)
+      await loadTransactions(wasEditing ? page : 0, { ignoreGlobalLoading: true })
+      showSnackbar('success', wasEditing ? 'Transação atualizada com sucesso.' : 'Transação criada com sucesso.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao criar transação')
+      const message = e instanceof Error ? e.message : 'Erro ao salvar transação'
+      setError(message)
+      showSnackbar('error', message)
     }
   }
 
-  const confirmDeleteTransaction = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.')) return false
-    await deleteTransaction(id)
-    await loadTransactions(page)
-    return true
+  const confirmDeleteTransaction = async () => {
+    if (!deleteCandidateId || deleteLoading) return
+    const deletedId = deleteCandidateId
+    setDeleteLoading(true)
+    setDeleteError(null)
+    try {
+      await deleteTransaction(deletedId)
+      const nextPage = transactions.length <= 1 && page > 0 ? page - 1 : page
+      await loadTransactions(nextPage, { ignoreGlobalLoading: true })
+      setDeleteCandidateId(null)
+      if (detailsId === deletedId) setDetailsId(null)
+      showSnackbar('success', 'Transação excluída com sucesso.')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Erro ao excluir transação'
+      setDeleteError(message)
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   if (loading || !data) {
@@ -239,7 +277,7 @@ export default function TransacoesPage() {
           </div>
         </div>
         <div className="dateFilterFields">
-          <div className="field">
+          <div className="field dateFilterSearch">
             <div className="label">Buscar</div>
             <Input
               value={search}
@@ -247,11 +285,11 @@ export default function TransacoesPage() {
               placeholder="Descrição, categoria, usuário ou valor"
             />
           </div>
-          <div className="field">
+          <div className="field dateFilterDate">
             <div className="label">De</div>
             <DateInput value={dateFrom} onChange={setDateFrom} max={dateTo || undefined} />
           </div>
-          <div className="field">
+          <div className="field dateFilterDate">
             <div className="label">Até</div>
             <DateInput value={dateTo} onChange={setDateTo} min={dateFrom || undefined} />
           </div>
@@ -299,7 +337,14 @@ export default function TransacoesPage() {
                     {canEdit ? (
                       <>
                         <ActionIconButton action="edit" onClick={() => openForEdit(tx)} aria-label="Editar transação" />
-                        <ActionIconButton action="delete" onClick={() => void confirmDeleteTransaction(tx.id)} aria-label="Excluir transação" />
+                        <ActionIconButton
+                          action="delete"
+                          onClick={() => {
+                            setDeleteError(null)
+                            setDeleteCandidateId(tx.id)
+                          }}
+                          aria-label="Excluir transação"
+                        />
                       </>
                     ) : null}
                   </div>
@@ -463,9 +508,8 @@ export default function TransacoesPage() {
                     <ActionIconButton
                       action="delete"
                       onClick={() => {
-                        void confirmDeleteTransaction(tx.id).then((deleted) => {
-                          if (deleted) setDetailsId(null)
-                        })
+                        setDeleteError(null)
+                        setDeleteCandidateId(tx.id)
                       }}
                       aria-label="Excluir transação"
                     />
@@ -476,6 +520,23 @@ export default function TransacoesPage() {
           })()}
         </Modal>
       ) : null}
+
+      {deleteCandidateId ? (
+        <ConfirmDialog
+          title="Excluir transação?"
+          description="Esta transação será removida definitivamente. Essa ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          loading={deleteLoading}
+          errorMessage={deleteError}
+          onCancel={() => {
+            setDeleteError(null)
+            setDeleteCandidateId(null)
+          }}
+          onConfirm={() => void confirmDeleteTransaction()}
+        />
+      ) : null}
+
+      {snackbar ? <Snackbar tone={snackbar.tone} message={snackbar.message} onClose={() => setSnackbar(null)} /> : null}
     </>
   )
 }
